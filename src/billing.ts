@@ -29,12 +29,15 @@ export function checkoutUrl(email = ''): string {
 export function storeReturnedLicense(): boolean {
   const url = new URL(location.href);
   const license = url.searchParams.get('license');
-  if (!license) return false;
-  localStorage.setItem(LICENSE_KEY, license.trim());
-  localStorage.removeItem(VERDICT_KEY);
+  if (license === null) return false;
+  const token = license.trim();
+  if (token) {
+    localStorage.setItem(LICENSE_KEY, token);
+    localStorage.removeItem(VERDICT_KEY);
+  }
   url.searchParams.delete('license');
   history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
-  return true;
+  return Boolean(token);
 }
 
 export function saveLicense(license: string): void {

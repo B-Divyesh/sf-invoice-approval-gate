@@ -6,6 +6,7 @@ import {
   encryptDocument,
   encryptionSupported,
   getGates,
+  MAX_FILE_BYTES,
   makeExport,
   putGate,
   readExport,
@@ -26,8 +27,6 @@ import { emailDraftUrl, escapeHtml as e, formatDate, formatMoney, newAudit, safe
 type AppView = 'desk' | 'new' | 'settings';
 
 const FREE_ACTIVE_LIMIT = 5;
-const MAX_FILE_BYTES = 15 * 1024 * 1024;
-
 class SendGateApp {
   private readonly root: HTMLElement;
   private gates: Gate[] = [];
@@ -43,7 +42,9 @@ class SendGateApp {
     this.root = root;
     this.root.addEventListener('click', (event) => void this.onClick(event));
     this.root.addEventListener('change', (event) => void this.onChange(event));
+    this.root.addEventListener('input', (event) => this.onInput(event));
     this.root.addEventListener('submit', (event) => void this.onSubmit(event));
+    document.querySelector<HTMLAnchorElement>('.skip-link')?.addEventListener('click', (event) => this.skipToMain(event));
     window.addEventListener('popstate', () => this.routeFromUrl());
     window.addEventListener('online', () => this.render());
     window.addEventListener('offline', () => this.render());
@@ -65,7 +66,13 @@ class SendGateApp {
       const wasPro = this.pro;
       this.pro = result.valid;
       if (returned && result.valid) this.notice = 'Pro unlocked on this device.';
-      if (wasPro && !result.valid && !result.offline) this.notice = 'License no longer active. Free features remain available.';
+      if (returned && !result.valid) {
+        this.notice = result.offline
+          ? 'License saved, but it could not be checked offline. Connect and restore it from Settings.'
+          : 'That license is not active for Send Gate. Free features and purchase options remain available.';
+      } else if (wasPro && !result.valid && !result.offline) {
+        this.notice = 'License no longer active. Free features remain available.';
+      }
       this.render();
     }
     await this.registerServiceWorker();
@@ -125,7 +132,7 @@ class SendGateApp {
   }
 
   private storageFailure(): string {
-    return `<main id="main" class="error-page">
+    return `<main id="main" class="error-page" tabindex="-1">
       <p class="eyebrow">Local storage unavailable</p>
       <h1>The approval desk could not open.</h1>
       <p>${e(this.storageError)}</p>
@@ -138,7 +145,7 @@ class SendGateApp {
     if (!this.gates.length) return this.emptyDesk();
     const selected = this.selected ?? this.gates[0];
     if (!this.selectedId) this.selectedId = selected.id;
-    return `<main id="main" class="desk-main">
+    return `<main id="main" class="desk-main" tabindex="-1">
       <div class="page-heading">
         <div><p class="eyebrow">Approval desk · ${this.gates.length} ${this.gates.length === 1 ? 'gate' : 'gates'}</p><h1>What is waiting at the gate?</h1></div>
         <button class="primary paper-button" data-action="new-gate"><span aria-hidden="true">＋</span> New approval gate</button>
@@ -151,7 +158,7 @@ class SendGateApp {
   }
 
   private emptyDesk(): string {
-    return `<main id="main" class="empty-main">
+    return `<main id="main" class="empty-main" tabindex="-1">
       <section class="hero-copy">
         <p class="eyebrow">A second pair of eyes, before send</p>
         <h1>Nothing leaves without a second look.</h1>
@@ -239,8 +246,8 @@ class SendGateApp {
         <div class="document-actions">
           <button class="secondary" data-action="open-source">${gate.document ? 'Open PDF' : 'Open source link'} <span aria-hidden="true">↗</span></button>
         </div>
-        <label for="review-comment">Decision comment <span class="optional">(required to return)</span></label>
-        <textarea id="review-comment" rows="3" maxlength="500" placeholder="What did you check, or what needs changing?"></textarea>
+        <label for="review-comment">Decision comment <span class="required-note">(required)</span></label>
+        <textarea id="review-comment" rows="3" maxlength="500" required aria-describedby="review-error" placeholder="What did you check, or what needs changing?"></textarea>
         <div class="decision-actions">
           <button class="approve-button" data-action="decide" data-decision="approved"><span aria-hidden="true">✓</span> Approve to send</button>
           <button class="return-button" data-action="decide" data-decision="rejected"><span aria-hidden="true">↩</span> Return for changes</button>
@@ -284,7 +291,7 @@ class SendGateApp {
   private gateForm(): string {
     const gate = this.editing ? this.selected : undefined;
     const activeLimitReached = !this.pro && !gate && this.activeCount() >= FREE_ACTIVE_LIMIT;
-    return `<main id="main" class="form-main">
+    return `<main id="main" class="form-main" tabindex="-1">
       <div class="form-intro">
         <button class="back-button" data-action="back-desk"><span aria-hidden="true">←</span> Approval desk</button>
         <p class="eyebrow">${gate ? 'Edit the checkpoint' : 'New approval gate'}</p>
@@ -304,7 +311,7 @@ class SendGateApp {
           <h2>The document</h2>
           <div class="field-grid two">
             <label>Type<select name="kind" required><option value="invoice" ${gate?.kind === 'invoice' ? 'selected' : ''}>Invoice</option><option value="quote" ${gate?.kind === 'quote' ? 'selected' : ''}>Quote</option></select></label>
-            <label>Gate name<input name="title" required maxlength="80" value="${e(gate?.title ?? '')}" autocomplete="off" placeholder="e.g. Acme — August retainer" /></label>
+            <label>Gate name<input name="title" required data-trim-required maxlength="80" value="${e(gate?.title ?? '')}" autocomplete="off" placeholder="e.g. Acme — August retainer" /></label>
           </div>
           <fieldset class="source-choice"><legend>Where is the document?</legend>
             <label><input type="radio" name="sourceType" value="pdf" ${source === 'pdf' ? 'checked' : ''} /><span><strong>PDF on this device</strong><small>Encrypted before local storage</small></span></label>
@@ -324,7 +331,7 @@ class SendGateApp {
         <div class="section-fields">
           <h2>Client handoff</h2>
           <div class="field-grid two">
-            <label>Client name<input name="recipientName" required maxlength="100" autocomplete="organization" value="${e(gate?.recipientName ?? '')}" /></label>
+            <label>Client name<input name="recipientName" required data-trim-required maxlength="100" autocomplete="organization" value="${e(gate?.recipientName ?? '')}" /></label>
             <label>Client email<input name="recipientEmail" type="email" required maxlength="160" autocomplete="email" value="${e(gate?.recipientEmail ?? '')}" /></label>
             <label>Amount<input name="amount" type="number" required min="0" step="0.01" inputmode="decimal" value="${gate ? e(gate.amount) : ''}" /></label>
             <label>Currency<select name="currency" required>${['USD', 'GBP', 'EUR', 'INR', 'CAD', 'AUD'].map((currency) => `<option ${gate?.currency === currency ? 'selected' : ''}>${currency}</option>`).join('')}</select></label>
@@ -335,7 +342,7 @@ class SendGateApp {
         <div class="section-number" aria-hidden="true">03</div>
         <div class="section-fields">
           <h2>The second pair of eyes</h2>
-          <label>Reviewer name<input name="approver" required maxlength="100" autocomplete="name" value="${e(gate?.approver ?? '')}" aria-describedby="approver-help" /></label>
+          <label>Reviewer name<input name="approver" required data-trim-required maxlength="100" autocomplete="name" value="${e(gate?.approver ?? '')}" aria-describedby="approver-help" /></label>
           <p id="approver-help" class="field-help">Send Gate records the name you enter; it does not verify identity or provide legal approval.</p>
         </div>
       </div>
@@ -346,7 +353,7 @@ class SendGateApp {
 
   private settingsPage(): string {
     const licensePresent = hasLicense();
-    return `<main id="main" class="settings-main">
+    return `<main id="main" class="settings-main" tabindex="-1">
       <div class="settings-heading"><p class="eyebrow">Local controls</p><h1>Your desk, your data.</h1><p>Everything below is explicit. Send Gate does not sync in the background or upload your documents.</p></div>
       <div class="settings-grid">
         <section class="settings-section" aria-labelledby="data-heading">
@@ -372,7 +379,7 @@ class SendGateApp {
   private legalPage(page: 'privacy' | 'terms'): string {
     const privacy = page === 'privacy';
     return `<header class="site-header legal-header"><a class="brand" href="/" data-route="/"><span class="brand-mark" aria-hidden="true"><span></span></span><span>Send Gate</span></a><a href="/" data-route="/">Return to approval desk</a></header>
-      <main id="main" class="legal-main">
+      <main id="main" class="legal-main" tabindex="-1">
         <p class="eyebrow">Last updated 28 August 2026</p>
         <h1>${privacy ? 'Privacy, without fine print.' : 'Terms of use.'}</h1>
         ${privacy ? `
@@ -442,8 +449,27 @@ class SendGateApp {
       if (pdf && link) { pdf.hidden = !isPdf; link.hidden = isPdf; }
       if (fileInput) fileInput.required = isPdf && !this.selected?.document;
       if (linkInput) linkInput.required = !isPdf;
+      const error = document.querySelector<HTMLElement>('#form-error');
+      if (error) error.textContent = '';
     }
     if (input.id === 'import-file' && input.files?.[0]) await this.importData(input.files[0]);
+  }
+
+  private onInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.matches('[data-trim-required]')) {
+      input.setCustomValidity('');
+      input.removeAttribute('aria-invalid');
+    }
+  }
+
+  private skipToMain(event: Event): void {
+    event.preventDefault();
+    const main = document.querySelector<HTMLElement>('#main');
+    if (!main) return;
+    history.replaceState({}, '', `${location.pathname}${location.search}#main`);
+    main.focus({ preventScroll: true });
+    main.scrollIntoView({ block: 'start' });
   }
 
   private async onSubmit(event: SubmitEvent): Promise<void> {
@@ -473,6 +499,20 @@ class SendGateApp {
 
   private async saveGate(form: HTMLFormElement): Promise<void> {
     const errorNode = form.querySelector<HTMLElement>('#form-error');
+    const trimmedFields = [...form.querySelectorAll<HTMLInputElement>('[data-trim-required]')];
+    for (const field of trimmedFields) {
+      field.setCustomValidity('');
+      field.removeAttribute('aria-invalid');
+    }
+    const blankField = trimmedFields.find((field) => !field.value.trim());
+    if (blankField) {
+      blankField.setCustomValidity('Enter a value that is not only spaces.');
+      blankField.setAttribute('aria-invalid', 'true');
+      if (errorNode) errorNode.textContent = 'Gate name, client name, and reviewer name cannot be blank.';
+      blankField.focus();
+      blankField.reportValidity();
+      return;
+    }
     if (!form.checkValidity()) {
       form.reportValidity();
       if (errorNode) errorNode.textContent = 'Complete the highlighted fields before saving.';
@@ -486,9 +526,9 @@ class SendGateApp {
       const sourceType = String(data.get('sourceType')) as SourceType;
       const file = data.get('document');
       let encrypted = sourceType === 'pdf' ? existing?.document : undefined;
-      if (file instanceof File && file.size > 0) {
+      const replacesDocument = sourceType === 'pdf' && file instanceof File && file.size > 0;
+      if (replacesDocument) {
         if (file.size > MAX_FILE_BYTES) throw new Error('That PDF is larger than 15 MB. Use a smaller PDF or a secure share link.');
-        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) throw new Error('Choose a PDF file, or use a secure share link.');
         encrypted = await encryptDocument(file);
       }
       if (sourceType === 'pdf' && !encrypted) throw new Error('Choose the PDF that needs approval.');
@@ -497,6 +537,18 @@ class SendGateApp {
       const now = new Date().toISOString();
       const title = String(data.get('title')).trim();
       const actor = 'Document owner';
+      const recipientName = String(data.get('recipientName')).trim();
+      const recipientEmail = String(data.get('recipientEmail')).trim();
+      const amount = Number(data.get('amount'));
+      const currency = String(data.get('currency'));
+      const approver = String(data.get('approver')).trim();
+      const materialChange = Boolean(existing && (
+        title !== existing.title || String(data.get('kind')) !== existing.kind || sourceType !== existing.sourceType ||
+        replacesDocument || (sourceType === 'link' && link !== existing.shareLink) ||
+        recipientName !== existing.recipientName || recipientEmail !== existing.recipientEmail ||
+        amount !== existing.amount || currency !== existing.currency || approver !== existing.approver
+      ));
+      const approvalWithdrawn = existing?.status === 'approved' && materialChange;
       const gate: Gate = {
         id: existing?.id ?? crypto.randomUUID(),
         title,
@@ -504,20 +556,20 @@ class SendGateApp {
         sourceType,
         document: encrypted,
         shareLink: sourceType === 'link' ? link : undefined,
-        recipientName: String(data.get('recipientName')).trim(),
-        recipientEmail: String(data.get('recipientEmail')).trim(),
-        amount: Number(data.get('amount')),
-        currency: String(data.get('currency')),
-        approver: String(data.get('approver')).trim(),
-        status: existing?.status === 'rejected' ? 'draft' : existing?.status ?? 'draft',
-        decisionComment: existing?.status === 'rejected' ? undefined : existing?.decisionComment,
+        recipientName,
+        recipientEmail,
+        amount,
+        currency,
+        approver,
+        status: existing?.status === 'rejected' || approvalWithdrawn ? 'draft' : existing?.status ?? 'draft',
+        decisionComment: existing?.status === 'rejected' || approvalWithdrawn ? undefined : existing?.decisionComment,
         createdAt: existing?.createdAt ?? now,
         updatedAt: now,
-        history: existing ? [...existing.history, newAudit('edited', actor, 'Document details were updated.')] : [newAudit('created', actor, `${title} was placed at the gate.`)],
+        history: existing ? [...existing.history, newAudit('edited', actor, approvalWithdrawn ? 'Material details changed; the prior approval was withdrawn and a new review is required.' : 'Document details were updated.')] : [newAudit('created', actor, `${title} was placed at the gate.`)],
       };
       await putGate(gate);
       await this.reload(gate.id);
-      this.notice = existing ? 'Gate changes saved on this device.' : 'Draft gate created and encrypted on this device.';
+      this.notice = approvalWithdrawn ? 'Changes saved. The send handoff is locked until a new approval.' : existing ? 'Gate changes saved on this device.' : 'Draft gate created and encrypted on this device.';
       this.go(`/?gate=${encodeURIComponent(gate.id)}`);
     } catch (error) {
       if (errorNode) errorNode.textContent = error instanceof Error ? error.message : 'The gate could not be saved. Try again.';
@@ -545,8 +597,8 @@ class SendGateApp {
     const textarea = document.querySelector<HTMLTextAreaElement>('#review-comment');
     const comment = textarea?.value.trim() ?? '';
     const error = document.querySelector<HTMLElement>('#review-error');
-    if (decision === 'rejected' && !comment) {
-      if (error) error.textContent = 'Add a comment explaining what needs to change.';
+    if (!comment) {
+      if (error) error.textContent = decision === 'approved' ? 'Add a comment describing what you checked before approving.' : 'Add a comment explaining what needs to change.';
       textarea?.focus();
       return;
     }

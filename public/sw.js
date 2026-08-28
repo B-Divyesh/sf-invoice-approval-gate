@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'send-gate-v1';
+const CACHE_VERSION = 'send-gate-v2';
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const CORE = [
