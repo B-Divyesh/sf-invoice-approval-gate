@@ -1,72 +1,130 @@
-# Send Gate independent verification handoff
+# Send Gate repair handoff
 
-## Result: FAIL
+## Result: repaired, deployed, and verified
 
-Candidate `035743eeec225fc1f9c0e19895ef359fcd9a8633` was independently verified
-on 2026-08-28 from a clean detached checkout and against
-<https://invoice-approval-gate.sociobot.in>. The live deployment matches the
-candidate byte for byte. A previously suspected deployment-only condition is
-not present.
+This repair addresses every finding in independent verifier report commit
+`566160a626d2c8513d0ffcdba48ec791c888a885` for candidate
+`035743eeec225fc1f9c0e19895ef359fcd9a8633`. The researched brief, local-first
+PWA artifact, static deployment class, visual thesis, five-gate free tier, and
+all previously passing workflows are preserved.
 
-Release is blocked by product behavior:
+## Repairs
 
-1. **Critical:** editing recipient, amount, or source after approval preserves
-   `approved` status and updates the released email handoff without a new
-   review.
-2. **High:** a version-1 backup with an invalid audit timestamp can replace the
-   current local gates, then leave the approval desk blank with an uncaught
-   `Invalid time value` error.
+- **SG-V01:** A material edit to an approved recipient, amount, source,
+  document, title, currency, kind, or reviewer now withdraws the prior
+  approval, clears its decision comment, returns the gate to draft, records
+  the reason in history, and removes every release control until reapproval.
+- **SG-V02:** Version-1 imports validate the bundle, all gate field types and
+  bounds, ISO dates, every audit event, source consistency, duplicate IDs,
+  PDF metadata, strict base64 length/encoding, byte count, and PDF signature
+  before encryption or the atomic IndexedDB replacement transaction begins.
+  Any failure keeps existing gates unchanged.
+- **SG-V03/SG-V04:** Post-trim empty gate, client, and reviewer names focus and
+  announce the failing field. Both approve and return decisions require a
+  non-whitespace comment.
+- **SG-V05:** The paper-checkpoint artwork now uses a block picture and
+  intrinsic `height:auto` sizing, preserving its 3:2 composition at desktop
+  and 390 px instead of stretching/cropping it.
+- **SG-V06/SG-V07:** A selected oversized PDF is ignored after the user switches
+  to link mode, so the suggested recovery works. PDF intake now checks size,
+  MIME/extension identity, and an actual `%PDF-` header before encryption;
+  disguised text files are rejected with a recoverable error.
+- **SG-V08:** Skip-link activation programmatically focuses the current main
+  landmark. Brand and legal links meet the 44 px mobile target baseline.
+- **SG-V09:** `staticwebapp.config.json` now ships CSP/frame protection,
+  Permissions-Policy, COOP, two-year HSTS, correct manifest MIME, no-store
+  service-worker updates, and one-year immutable asset caching.
+- **SG-V10:** Invalid returned licenses leave the temporary Checking state,
+  explain the inactive token, and expose both buy and restore controls.
+- The manifest and service-worker cache generation are bumped to v2 so
+  installed clients receive this repair through the existing update toast.
 
-Additional medium findings cover whitespace-only required values, missing
-approval comments, distorted/cropped flagship artwork, oversized-file recovery,
-non-PDF acceptance, skip-link/touch-target behavior, and live response/cache
-policy. An invalid returned license also leaves stale “Checking” feedback.
+## Exact regression coverage
 
-Full evidence, exact reproduction steps, performance results, response policy,
-privacy traffic, accessibility, PWA/offline/update results, and the complete
-defect register are in [`.factory/verification.md`](verification.md).
+`tests/e2e/send-gate.spec.ts` reproduces the verifier paths for approval edit
+invalidation, invalid-audit import atomicity/no page error, valid portable PDF
+restore/re-encryption, all three whitespace identities, required approval and
+return comments, oversized-file link recovery, disguised PDFs, intrinsic hero
+geometry, skip-link focus, 44 px targets, and invalid returned-license
+reconciliation. The security/cache configuration has an executable policy
+assertion in `tests/utils.test.ts`.
 
-## Verification commands and results
+## Local verification — 2026-08-28 UTC
 
 ```sh
 npm ci --include=dev
+npm run typecheck
 npm test
 npm run build
 npm audit --json
-/opt/fleet/lib/verify-url.sh https://invoice-approval-gate.sociobot.in <evidence-dir>
+/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173 <evidence-dir>
 ```
 
-- Install: PASS, clean lockfile install; zero audit findings.
-- Tests: PASS, 3 Vitest assertions + 7 Playwright cases; 1 intentional duplicate
-  mobile PDF case skipped.
-- Type/build: PASS; strict TypeScript and exact Vite production build.
-- Lint: no lint command exists.
-- Supplied and independent axe: zero serious/critical findings in normal tested
-  screens.
-- Factory URL verifier: PASS with zero load console/page errors.
-- Live mobile Lighthouse 12.8.2: 100 performance / 100 accessibility / 100 best
-  practices / 100 SEO; LCP 1.004 s, TBT 28.5 ms, CLS 0.
-- Bundle budgets: PASS; JS 42,556 B raw, CSS 20,775 B raw, mobile artwork
-  14,878 B.
-- PWA: offline reload and mutation PASS; update toast and waiting-worker
-  activation PASS.
-- Privacy: no normal free-use cross-origin requests; local PDF ciphertext and
-  portable export behavior verified.
-- Desktop and exact 390 px mobile were exercised with keyboard, reduced motion,
-  invalid input, boundary values, recovery, persistence, deletion, export,
-  import, and license paths.
+- Clean install: **PASS** — 60 packages added, zero audit vulnerabilities.
+- Strict TypeScript: **PASS**.
+- Unit/policy: **PASS** — 4/4 Vitest assertions.
+- Browser integration: **PASS** — 19 Playwright cases across desktop Chromium
+  and exact 390×844 mobile; 3 intentional duplicate mobile large-file/PDF
+  crypto cases skipped. The offline reload and offline mutation case passed.
+- Accessibility: **PASS** — axe found zero violations on exercised empty,
+  populated, privacy, and terms screens; keyboard decision flow, skip link,
+  focus, reduced motion, semantic landmarks, and 44 px mobile targets passed.
+- Browser health/privacy: **PASS** — factory verifier found one h1/main,
+  title/lang/alt coverage, and zero console or page errors; a fresh free-use
+  session made zero cross-origin requests and had no horizontal overflow.
+- PWA: **PASS** — active controller; `send-gate-v2-shell` and
+  `send-gate-v2-runtime` caches; explicit offline workflow passed; registering
+  a changed worker URL showed “A fresh version is ready,” and Update now moved
+  control from `/sw.js` to `/sw.js?qa-update=2`.
+- Production build: **PASS** — `dist/index.html` at root; initial JS 46,868 B
+  raw / 15.01 kB gzip, CSS 20,917 B raw / 5.55 kB gzip, mobile artwork
+  14,878 B. All performance budgets pass.
+- Local mobile Lighthouse 12.8.2: **100 performance / 100 accessibility / 100
+  best practices / 100 SEO**; FCP 1.1 s, LCP 1.2 s, TBT 0 ms, CLS 0.
+- Package/consumer check: not applicable; this is a private static PWA, not a
+  published package. A standalone linter is not configured; strict `tsc`
+  typechecking and production compilation pass with no diagnostics.
 
-## Required next steps
+## Deployment and live verification
 
-1. Reset every materially edited approved gate to an unapproved state and hide
-   the release controls until the changed record is reviewed again.
-2. Fully validate imported audit events, dates, document metadata/base64, and
-   field types before replacing current data; keep replacement atomic on any
-   error.
-3. Add regression cases for the two blockers and the invalid/recovery findings.
-4. Correct the hero image sizing, skip-link focus target, touch targets, license
-   feedback, and live security/cache headers.
-5. Build and deploy a new candidate, then repeat independent verification.
+- Repair commits `c79adad` and `341ed11` were pushed to `origin/main` and the
+  production build was deployed with the work order's static deployer to the
+  existing `sf-invoice-approval-gate` Azure Static Web App in `centralus`.
+  Final deployment ID: `60e23307-4faa-42cb-aacc-bc17bc8f71e0`.
+- <https://invoice-approval-gate.sociobot.in> returned HTTPS 200. The factory
+  URL verifier found the expected title/lang/h1/main/alt/button semantics and
+  zero console or page errors on desktop and 390 px captures.
+- Local/live SHA-256 matched for the deployed entry point and runtime:
+  `index.html` `dc07550444998921c936af2387bef80e27f38c8b582dcaff0b695c37220a588a`,
+  JS `cc86f4106dc14968c7041f3454d35e921dc28ad742d1e6e5d2574c0e203e8f64`,
+  CSS `d2c5dc5c1787262c05e751cbc91dab9dbaf1996b93b6cc5aacd2a2387de90ec5`,
+  service worker `3b22a1b08337b50150ef4f4c6a77a67dd2acfd2f59cb27312677c129c22972f5`,
+  and manifest `c8cf3996fcec119bdef15699798f38c6ec4b161b1b09381b093dc2e3aa65898d`.
+- Live response policy: HTML `no-cache, must-revalidate`; service worker
+  `no-cache, no-store, must-revalidate`; hashed assets
+  `public, max-age=31536000, immutable`; manifest
+  `application/manifest+json` with one-hour revalidation. CSP includes
+  `frame-ancestors 'none'`; `X-Frame-Options: DENY`, Permissions-Policy,
+  `Cross-Origin-Opener-Policy: same-origin`, `nosniff`, strict referrer policy,
+  and `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`
+  are all present.
+- Live 390 px browser check: active v2 worker and caches, offline reload,
+  visible offline state, no horizontal overflow, one h1/main, zero axe
+  violations, zero cross-origin free-use requests, and zero console/page
+  errors.
+- Live invalid-license check used the real Sociobot response (HTTP 200,
+  `{valid:false, reason:"invalid"}`): the token was stripped from the URL,
+  checking feedback resolved, and Buy Pro plus restore controls were visible.
+- Live mobile Lighthouse 12.8.2: **100 performance / 100 accessibility / 100
+  best practices / 100 SEO**; FCP 1.0 s, LCP 1.1 s, TBT 80 ms, CLS 0.
 
-Only `.factory/verification.md` and this handoff were changed by the verifier;
-product code was not modified.
+## Known product boundaries
+
+- Approval remains a local handoff record, not authenticated identity, a legal
+  signature, accounting compliance, or multi-device collaboration.
+- Browsers cannot attach a PDF through `mailto:`. The user downloads the
+  approved PDF and remains in control of sending.
+- Clearing site data removes gates and the local encryption key. Portable
+  exports remain the explicit recovery path and contain readable data.
+- The public $29 one-time billing product must remain registered in the
+  Sociobot engine; no payment-provider code or secret is embedded here.

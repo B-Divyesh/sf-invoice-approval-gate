@@ -97,7 +97,10 @@ people. Negative list: text, letters, numbers, logos, watermark, currency
 symbols, hands, photorealistic electronics, gradients, glossy 3D plastic,
 clutter, torn edges.
 
-Asset: `public/assets/send-gate-diorama.webp` and PNG source in `assets/src/`.
+Assets: `public/assets/send-gate-diorama-640.webp` and
+`public/assets/send-gate-diorama-1280.webp`, with the PNG source in
+`assets/src/`. The responsive image renders at its intrinsic 3:2 proportion;
+it is never stretched or center-cropped.
 Prompt: “Handcrafted paper-cut diorama, a clean blank invoice sheet paused at
 a small deep forest-green checkpoint gate before an outgoing paper tray, coral
 approval tab, layered recycled cream cardstock, tiny brass fastener, warm

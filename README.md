@@ -29,15 +29,18 @@ Live product: <https://invoice-approval-gate.sociobot.in>
 Requires Node.js 22 or a compatible current LTS release.
 
 ```sh
-npm install
+npm ci --include=dev
 npm run dev
+npm run typecheck
 npm test
 npm run build
 npm run preview
 ```
 
-`npm test` runs Vitest and Playwright 1.58.2 in desktop and mobile viewports,
-including axe checks, the complete approval handoff, encrypted PDF persistence,
+`npm test` runs Vitest and Playwright 1.58.2 in desktop and exact 390 px mobile
+viewports. Coverage includes axe, the complete approval handoff, approval
+withdrawal after edits, atomic import rejection, encrypted PDF persistence and
+restore, input/file recovery, licensing feedback, keyboard/touch geometry,
 direct legal routes, and an explicit offline reload/mutation test.
 
 The exact production build command is:
@@ -59,8 +62,10 @@ VITE_BILLING_API_BASE=https://pilot-api.sociobot.in/api/v1 npm run build
 ```
 
 No product ID or secret is stored in the repository; billing uses the public
-`invoice-approval-gate` slug. Deploy only the contents of `dist/`. The host
-should serve HTTPS so Web Crypto and service workers are available.
+`invoice-approval-gate` slug. Deploy only the contents of `dist/`. The included
+`staticwebapp.config.json` applies the product's CSP, anti-framing, permissions,
+manifest MIME, update, and immutable-asset cache policy on Azure Static Web
+Apps. The host must serve HTTPS so Web Crypto and service workers are available.
 
 ## Privacy and limitations
 
