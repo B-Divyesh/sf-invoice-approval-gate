@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://invoice-approval-gate.sociobot.in/sitemap.xml

@@ -160,7 +160,7 @@ class SendGateApp {
           <button class="primary paper-button" data-action="new-gate">Create your first gate <span aria-hidden="true">→</span></button>
           <span>No account · works offline · PDFs encrypted locally</span>
         </div>
-        <ol class="how-strip" aria-label="How Send Gate works">
+        <ol class="how-strip" aria-label="How Send Gate works" tabindex="0">
           <li><span>1</span><strong>Place</strong><small>Add a PDF or link</small></li>
           <li><span>2</span><strong>Check</strong><small>Approve or return</small></li>
           <li><span>3</span><strong>Release</strong><small>Open the email draft</small></li>
