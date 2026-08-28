@@ -1,75 +1,72 @@
-# Send Gate v1 handoff
+# Send Gate independent verification handoff
 
-## Delivered
+## Result: FAIL
 
-Send Gate is a complete local-first document approval checkpoint for small
-teams. A user can create a gate from a PDF or HTTPS share link, record client,
-amount and reviewer details, submit it to a locked review state, approve or
-return it with one decision comment, release a user-controlled email handoff
-only after approval, and seal the record after marking it sent. A timestamped
-history remains visible throughout and a sent record cannot accidentally send
-again; revisions start as a separate draft.
+Candidate `035743eeec225fc1f9c0e19895ef359fcd9a8633` was independently verified
+on 2026-08-28 from a clean detached checkout and against
+<https://invoice-approval-gate.sociobot.in>. The live deployment matches the
+candidate byte for byte. A previously suspected deployment-only condition is
+not present.
 
-PDF bytes are AES-GCM encrypted before IndexedDB storage. Decryption occurs only
-for local review, download, or an explicit portable backup. The app includes
-named deletion confirmation, JSON export/import with re-encryption on restore,
-empty/error/offline states, a hand-written service worker and install manifest,
-update notification, direct `/privacy/` and `/terms/` pages, and responsive
-keyboard-accessible layouts down to 390 px.
+Release is blocked by product behavior:
 
-The free tier supports five active gates. The $29 one-time Pro unlock adds
-unlimited active gates through the required Sociobot checkout, returned-license
-storage, once-daily verification cache, offline optimistic verdict, revoked
-license handling, and paste-to-restore flow. No product ID or payment provider
-is embedded; the public product slug is used.
+1. **Critical:** editing recipient, amount, or source after approval preserves
+   `approved` status and updates the released email handoff without a new
+   review.
+2. **High:** a version-1 backup with an invalid audit timestamp can replace the
+   current local gates, then leave the approval desk blank with an uncaught
+   `Invalid time value` error.
 
-The paper-cut diorama system, image prompt, visual review, and provenance are in
-`.factory/design.md`. Generated source and prompt metadata are retained in
-`assets/src/`; optimized WebP variants are 15 KB and 51 KB.
+Additional medium findings cover whitespace-only required values, missing
+approval comments, distorted/cropped flagship artwork, oversized-file recovery,
+non-PDF acceptance, skip-link/touch-target behavior, and live response/cache
+policy. An invalid returned license also leaves stale “Checking” feedback.
 
-## Run and verify
+Full evidence, exact reproduction steps, performance results, response policy,
+privacy traffic, accessibility, PWA/offline/update results, and the complete
+defect register are in [`.factory/verification.md`](verification.md).
+
+## Verification commands and results
 
 ```sh
-npm install
+npm ci --include=dev
 npm test
 npm run build
-npm run preview
+npm audit --json
+/opt/fleet/lib/verify-url.sh https://invoice-approval-gate.sociobot.in <evidence-dir>
 ```
 
-Production build command: `npm run build`
+- Install: PASS, clean lockfile install; zero audit findings.
+- Tests: PASS, 3 Vitest assertions + 7 Playwright cases; 1 intentional duplicate
+  mobile PDF case skipped.
+- Type/build: PASS; strict TypeScript and exact Vite production build.
+- Lint: no lint command exists.
+- Supplied and independent axe: zero serious/critical findings in normal tested
+  screens.
+- Factory URL verifier: PASS with zero load console/page errors.
+- Live mobile Lighthouse 12.8.2: 100 performance / 100 accessibility / 100 best
+  practices / 100 SEO; LCP 1.004 s, TBT 28.5 ms, CLS 0.
+- Bundle budgets: PASS; JS 42,556 B raw, CSS 20,775 B raw, mobile artwork
+  14,878 B.
+- PWA: offline reload and mutation PASS; update toast and waiting-worker
+  activation PASS.
+- Privacy: no normal free-use cross-origin requests; local PDF ciphertext and
+  portable export behavior verified.
+- Desktop and exact 390 px mobile were exercised with keyboard, reduced motion,
+  invalid input, boundary values, recovery, persistence, deletion, export,
+  import, and license paths.
 
-Static output: `./dist/` (`dist/index.html` is at its root)
+## Required next steps
 
-Verification completed 2026-08-28:
+1. Reset every materially edited approved gate to an unapproved state and hide
+   the release controls until the changed record is reviewed again.
+2. Fully validate imported audit events, dates, document metadata/base64, and
+   field types before replacing current data; keep replacement atomic on any
+   error.
+3. Add regression cases for the two blockers and the invalid/recovery findings.
+4. Correct the hero image sizing, skip-link focus target, touch targets, license
+   feedback, and live security/cache headers.
+5. Build and deploy a new candidate, then repeat independent verification.
 
-- `npm test`: 3 Vitest assertions and 7 Playwright cases passed; one duplicate
-  mobile PDF case intentionally skipped because Chromium covers file crypto,
-  while both desktop and Pixel-sized projects cover the full link workflow.
-- Playwright covers create, reload, approve, email release, sent sealing,
-  AES-GCM ciphertext presence, PDF download, direct legal routes, 390 px
-  overflow, and explicit `context.setOffline(true)` reload plus mutation.
-- Axe integration: zero violations on empty, populated desk, privacy, and terms
-  screens in desktop/mobile projects.
-- Factory `verify-url.sh`: HTTP 200, title/lang/main present, exactly one h1,
-  no missing image alt text, no unlabeled buttons, and zero console errors.
-- Lighthouse 12.8.2 mobile: Performance **99**, Accessibility **100**, Best
-  Practices **100**, SEO **100**. FCP 0.9 s, LCP 1.2 s, TBT 90 ms, CLS 0.
-- Production payload: initial JS 41.9 KB raw / 13.4 KB gzip; CSS 20.8 KB raw /
-  5.5 KB gzip; mobile hero 15 KB. All are below the required budgets.
-- `npm audit`: zero known dependency vulnerabilities.
-
-## Known gaps and operational next steps
-
-- Approval is a local handoff record, not authenticated identity, a legal
-  signature, accounting compliance, or multi-device collaboration. This is
-  disclosed in the form, privacy page, terms, and README.
-- A PDF cannot be attached automatically through `mailto:`. The release step
-  downloads the approved PDF and clearly asks the user to attach it; sending
-  remains intentionally under user control.
-- Clearing browser site data removes both encrypted documents and their local
-  key. Users should keep normal business records and explicit exports.
-- Before public launch, the factory must register the
-  `invoice-approval-gate` product at the stated $29 one-time price and confirm
-  the return URL. Staging can set `VITE_BILLING_API_BASE` to the pilot API.
-- Deployment/DNS/infra were not changed from this repository, per the work
-  order.
+Only `.factory/verification.md` and this handoff were changed by the verifier;
+product code was not modified.
