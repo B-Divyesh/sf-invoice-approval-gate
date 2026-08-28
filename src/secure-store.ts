@@ -176,7 +176,24 @@ export async function readExport(file: File): Promise<Gate[]> {
   }
   const restored: Gate[] = [];
   for (const portable of bundle.gates) {
-    if (!portable.id || !portable.title || !Array.isArray(portable.history)) throw new Error('The backup contains an incomplete gate.');
+    const validStatus = ['draft', 'awaiting', 'approved', 'rejected', 'sent'].includes(portable.status);
+    const validKind = ['invoice', 'quote'].includes(portable.kind);
+    const validSource = ['pdf', 'link'].includes(portable.sourceType);
+    const validAmount = typeof portable.amount === 'number' && Number.isFinite(portable.amount) && portable.amount >= 0;
+    if (
+      !portable.id || !portable.title || !portable.recipientName || !portable.recipientEmail || !portable.approver ||
+      !portable.currency || !portable.createdAt || !portable.updatedAt || !Array.isArray(portable.history) ||
+      !validStatus || !validKind || !validSource || !validAmount
+    ) throw new Error('The backup contains an incomplete or invalid gate.');
+    if (portable.sourceType === 'pdf' && !portable.document) throw new Error('A PDF gate in the backup is missing its document.');
+    if (portable.sourceType === 'link') {
+      try {
+        const url = new URL(portable.shareLink ?? '');
+        if (!['http:', 'https:'].includes(url.protocol)) throw new Error();
+      } catch {
+        throw new Error('A share-link gate in the backup has an invalid URL.');
+      }
+    }
     const document = portable.document;
     let encrypted: EncryptedDocument | undefined;
     if (document) {
