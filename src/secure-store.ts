@@ -268,12 +268,18 @@ function validatePortableGate(value: unknown, ids: Set<string>): PortableGate {
   ) throw new Error('The backup contains an incomplete or invalid gate.');
   if (Date.parse(gate.updatedAt) < Date.parse(gate.createdAt)) throw new Error('The backup contains an invalid gate date.');
 
+  const eventIds = new Set<string>();
+  let previousAt = Date.parse(gate.createdAt);
   for (const event of gate.history) {
     if (
       !isRecord(event) || !isString(event.id, 100) || !isIsoDate(event.at) ||
-      !isOneOf(event.action, AUDIT_ACTIONS) || !isString(event.actor, 100) || !isString(event.detail, 1000)
+      !isOneOf(event.action, AUDIT_ACTIONS) || !isString(event.actor, 100) || !isString(event.detail, 1000) ||
+      eventIds.has(event.id) || Date.parse(event.at) < previousAt || Date.parse(event.at) > Date.parse(gate.updatedAt)
     ) throw new Error('The backup contains an invalid approval-history event.');
+    eventIds.add(event.id);
+    previousAt = Date.parse(event.at);
   }
+  validateWorkflow(gate);
 
   let portableDocument: PortableDocument | undefined;
   if (gate.sourceType === 'pdf') {
@@ -303,4 +309,62 @@ function validatePortableGate(value: unknown, ids: Set<string>): PortableGate {
 
   ids.add(gate.id);
   return { ...gate, document: portableDocument } as unknown as PortableGate;
+}
+
+/**
+ * A backup is untrusted input. Its status is security-sensitive because an
+ * approved record unlocks the client handoff, so fields that happen to have
+ * the right TypeScript shape are not enough. Keep this aligned with the
+ * transitions emitted in main.ts.
+ */
+function validateWorkflow(gate: Record<string, unknown>): void {
+  const history = gate.history as Array<Record<string, unknown>>;
+  const actions = history.map((event) => event.action as string);
+  const first = actions[0];
+  if (first !== 'created' && first !== 'reopened') {
+    throw new Error('The backup contains an approval history that does not start with a draft.');
+  }
+
+  const hasMeaningfulComment = isString(gate.decisionComment, 500);
+  if (gate.status === 'approved' || gate.status === 'rejected' || gate.status === 'sent') {
+    if (!hasMeaningfulComment) {
+      const label = gate.status === 'rejected' ? 'returned' : gate.status;
+      const article = label === 'approved' ? 'An' : 'A';
+      throw new Error(`${article} ${label} gate in the backup is missing a reviewed approval record.`);
+    }
+  } else if (gate.decisionComment !== undefined) {
+    throw new Error('A draft or awaiting gate in the backup cannot contain a decision comment.');
+  }
+
+  // `edited` is deliberately the only non-deterministic event: a no-op edit
+  // keeps an approval released, while a material edit withdraws it to draft.
+  // Every decision transition remains strict, so no imported state can invent
+  // a route to an approved or sent handoff.
+  let possible = new Set<string>(['draft']);
+  for (const action of actions.slice(1)) {
+    const next = new Set<string>();
+    for (const state of possible) {
+      if (action === 'edited') {
+        if (state === 'draft') next.add('draft');
+        if (state === 'rejected') next.add('draft');
+        if (state === 'approved') { next.add('approved'); next.add('draft'); }
+      } else if (action === 'submitted' && (state === 'draft' || state === 'rejected')) {
+        next.add('awaiting');
+      } else if (action === 'returned' && state === 'awaiting') {
+        next.add('draft');
+      } else if (action === 'approved' && state === 'awaiting') {
+        next.add('approved');
+      } else if (action === 'rejected' && state === 'awaiting') {
+        next.add('rejected');
+      } else if (action === 'sent' && state === 'approved') {
+        next.add('sent');
+      }
+    }
+    possible = next;
+    if (!possible.size) throw new Error('The backup contains an impossible approval-history transition.');
+  }
+
+  if (!possible.has(gate.status as string)) {
+    throw new Error('The backup status does not match its approval history.');
+  }
 }

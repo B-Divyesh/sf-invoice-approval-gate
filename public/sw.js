@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'send-gate-v2';
+const CACHE_VERSION = 'send-gate-v3';
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const CORE = [
@@ -40,6 +40,14 @@ self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const names = await caches.keys();
     await Promise.all(names.filter((name) => ![SHELL_CACHE, RUNTIME_CACHE].includes(name)).map((name) => caches.delete(name)));
+    // A checkout return URL can contain a bearer license. Older workers cached
+    // navigations verbatim, so remove any such key even if a cache survives an
+    // upgrade for another reason.
+    await Promise.all((await caches.keys()).map(async (name) => {
+      const cache = await caches.open(name);
+      const requests = await cache.keys();
+      await Promise.all(requests.filter((request) => new URL(request.url).searchParams.has('license')).map((request) => cache.delete(request)));
+    }));
     await self.clients.claim();
   })());
 });
@@ -53,6 +61,14 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+
+  // Never put a returned bearer license into Cache Storage. The application
+  // strips it from the visible URL immediately after loading, but the worker
+  // sees the navigation first.
+  if (url.searchParams.has('license')) {
+    event.respondWith(fetch(request));
+    return;
+  }
 
   if (request.mode === 'navigate') {
     event.respondWith((async () => {

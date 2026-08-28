@@ -305,3 +305,47 @@ test('invalid returned license resolves checking feedback and restores purchase 
   await expect(page.getByText('Have a license? Restore purchase')).toBeVisible();
   await expect(page.getByText(/Checking your unlock/)).toHaveCount(0);
 });
+
+test('workflow-inconsistent backup cannot release a handoff or replace existing gates', async ({ page }) => {
+  await page.goto('/?new=1');
+  await fillLinkGate(page, 'Existing gate stays safe');
+  await page.getByRole('button', { name: /Create draft gate/ }).click();
+  await page.getByRole('link', { name: 'Settings' }).click();
+  const now = new Date().toISOString();
+  const backup = {
+    product: 'invoice-approval-gate', version: 1, exportedAt: now,
+    warning: 'This portable backup contains readable document data. Store it somewhere private.',
+    gates: [{
+      id: 'forged-approval', title: 'Forged approval', kind: 'invoice', sourceType: 'link',
+      shareLink: 'https://example.com/forged', recipientName: 'Forged Client',
+      recipientEmail: 'forged@example.com', amount: 42, currency: 'USD', approver: 'Reviewer',
+      status: 'approved', createdAt: now, updatedAt: now,
+      history: [{ id: 'created-only', at: now, action: 'created', actor: 'Document owner', detail: 'Placed at the gate.' }],
+    }],
+  };
+  await page.locator('#import-file').setInputFiles({
+    name: 'forged-approval.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)),
+  });
+  await expect(page.getByText('An approved gate in the backup is missing a reviewed approval record.')).toBeVisible();
+  await page.getByRole('link', { name: 'Approval desk' }).click();
+  await expect(page.getByRole('heading', { name: 'Existing gate stays safe' })).toBeVisible();
+  await expect(page.getByText('Forged approval')).toHaveCount(0);
+  await expect(page.locator('[data-email-draft]')).toHaveCount(0);
+});
+
+test('an active service worker never caches a returned license URL', async ({ page }) => {
+  await page.route('https://api.sociobot.in/api/v1/products/invoice-approval-gate/verify?*', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ valid: false, reason: 'invalid' }) });
+  });
+  await page.goto('/');
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.reload();
+  await page.goto('/?view=settings&license=qa-secret-must-not-cache');
+  await expect(page).not.toHaveURL(/license=/);
+  const cachedUrls = await page.evaluate(async () => {
+    const names = await caches.keys();
+    const keys = await Promise.all(names.map(async (name) => (await caches.open(name)).keys()));
+    return keys.flat().map((request) => request.url);
+  });
+  expect(cachedUrls.some((url) => url.includes('license='))).toBe(false);
+});
