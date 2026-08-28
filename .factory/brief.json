@@ -1,0 +1,30 @@
+{
+  "slug": "invoice-approval-gate",
+  "title": "Send Gate",
+  "territory": "utilities",
+  "user": "A 2–10 person agency or trade business that needs a second pair of eyes on a quote or invoice before it reaches a client.",
+  "evidence": [
+    {
+      "url": "https://hn.algolia.com/api/v1/items/45144422",
+      "date": "2025-09-05",
+      "quote_or_summary": "A freelancer asks which invoicing features matter and specifically seeks the workflows existing tools overcomplicate."
+    },
+    {
+      "url": "https://github.com/invoiceninja/invoiceninja/issues/12207",
+      "date": "2026-08-24",
+      "quote_or_summary": "A self-hosted Invoice Ninja user requests submit/approve/deny states so a senior person can prevent duplicate or incorrect quotes and invoices from being sent."
+    }
+  ],
+  "recurrence": "Two independent 2025–26 communities identify the same high-consequence moment: document creation is easy, but an accidental send harms a client relationship. It is most acute for small teams with junior administrators.",
+  "current_workaround": "Draft in QuickBooks, Xero, Invoice Ninja, or a document editor; ask for approval over chat/email; then manually remember to send the final version.",
+  "incumbents_and_gap": "QuickBooks, Xero, and Invoice Ninja create invoices, but formal approval is often a premium, broad-accounting feature. The unresolved gap is a tiny, auditable send gate that works with a PDF or a copied share link without adopting a new ledger.",
+  "smallest_useful_product": "A local-first PWA that stores a quote/invoice PDF, recipient, amount, approver, and one approve/reject comment; it releases a final share/email draft only after approval. Non-goals: payment processing, bookkeeping, e-signatures, or a full CRM.",
+  "success_measure": "In a 30-day pilot, 5 of 8 teams route at least 20 documents through it and report zero accidental sends or duplicate sends.",
+  "artifact_class": "pwa-offline",
+  "monetization": "one-time — the workflow has low ongoing infrastructure cost and small teams dislike another per-seat finance subscription.",
+  "constraints": "Encrypt locally stored documents where supported; require explicit deletion controls; email sending should remain user-controlled; do not claim legal approval or accounting compliance.",
+  "est_build_effort": "S",
+  "why_distinct": "It is a document-send checkpoint and handoff record, not another invoice generator or accounting package.",
+  "confidence": 4,
+  "state": "BUILT"
+}
