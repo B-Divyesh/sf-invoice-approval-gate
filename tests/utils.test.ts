@@ -33,6 +33,7 @@ describe('static release policy', () => {
   it('ships security, manifest MIME, update, and immutable asset headers', async () => {
     const config = JSON.parse(await readFile('public/staticwebapp.config.json', 'utf8')) as {
       globalHeaders: Record<string, string>;
+      mimeTypes: Record<string, string>;
       routes: Array<{ route: string; headers: Record<string, string> }>;
     };
     expect(config.globalHeaders['Content-Security-Policy']).toContain("frame-ancestors 'none'");
@@ -40,7 +41,7 @@ describe('static release policy', () => {
     expect(config.globalHeaders['Cross-Origin-Opener-Policy']).toBe('same-origin');
     expect(config.globalHeaders['Strict-Transport-Security']).toContain('max-age=63072000');
     expect(config.routes.find(({ route }) => route === '/assets/*')?.headers['Cache-Control']).toContain('immutable');
-    expect(config.routes.find(({ route }) => route === '/manifest.webmanifest')?.headers['Content-Type']).toBe('application/manifest+json; charset=utf-8');
+    expect(config.mimeTypes['.webmanifest']).toBe('application/manifest+json');
     expect(config.routes.find(({ route }) => route === '/sw.js')?.headers['Cache-Control']).toContain('no-store');
   });
 });

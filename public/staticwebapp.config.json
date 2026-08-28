@@ -6,6 +6,9 @@
       "/*.{css,js,png,jpg,svg,webp,ico,woff2,json,txt,xml,wasm,webmanifest}"
     ]
   },
+  "mimeTypes": {
+    ".webmanifest": "application/manifest+json"
+  },
   "routes": [
     {
       "route": "/assets/*",
@@ -22,8 +25,7 @@
     {
       "route": "/manifest.webmanifest",
       "headers": {
-        "Cache-Control": "public, max-age=3600, must-revalidate",
-        "Content-Type": "application/manifest+json; charset=utf-8"
+        "Cache-Control": "public, max-age=3600, must-revalidate"
       }
     },
     {
