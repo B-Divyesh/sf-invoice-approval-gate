@@ -22,7 +22,7 @@ words or uses a banned plain-words term.
 | Artwork caption | A document waits for a recorded approval before you send it. | 11 | pass |
 | Footer | Local approval records stay in this browser. | 7 | pass |
 | Footer | Original AI-assisted paper artwork, made for Send Gate. | 8 | pass |
-| Footer | Built by Param Factory · v1.0.1 · build repair-4 | 8 | pass |
+| Footer | Built by Param Factory · v1.0.2 · build repair-5 | 8 | pass |
 
 ## Terminology
 
