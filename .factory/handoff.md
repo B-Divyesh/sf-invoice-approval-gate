@@ -1,102 +1,45 @@
-# Send Gate repair handoff — work order `invoice-approval-gate-repair-4`
+# Send Gate verification handoff — work order `invoice-approval-gate-verify-5`
 
-## Result
+## Result: **FAIL**
 
-The repair addresses every release finding in
-[`verification-4.md`](verification-4.md) for candidate
-`517b06cc73e52198fa3fa3d9042298745f6959aceba`. It preserves the approval
-workflow, local encryption, PWA behavior, privacy posture, and payment API
-contract that had already passed independent verification.
+Independent verification of candidate
+`9ecdce585bf7b86e2b2058affa3482dd0f95c03d` at
+<https://invoice-approval-gate.sociobot.in> found the live static deployment
+matches the candidate, but it is not releasable.
 
-## What changed
+1. `npm test` fails a required `@claim:local-encryption` case under the normal
+   complete run (1 failed, 58 passed, 3 skipped). The same isolated claim can
+   pass, which establishes a flaky IndexedDB persistence/claim-test boundary,
+   not a passing quality gate.
+2. The advertised `$29 once` Pro checkout endpoint returns HTTP 404. The UI
+   keeps the free desk usable and shows its recovery message, but a customer
+   cannot buy the advertised upgrade.
 
-- Added the complete [`claims.json`](claims.json) manifest: 15 public claims,
-  each with exactly one `@claim:<id>` Playwright test. The test command is
-  recorded beside each claim and all tests use `/demo` only.
-- Added `/demo` with three opinionated sample gates, a persistent **Demo —
-  sample data, nothing is saved** banner, reset, and Start for real controls.
-  Demo IndexedDB, encryption key, and license cache use the separate `demo:`
-  namespace; no real desk storage is read or written in demo mode.
-- Rewrote the first screen in plain words for small agencies and trade teams,
-  with a one-click sample action, three tested facts, a real first action, and
-  non-truncating desktop/mobile workflow labels.
-- Replaced the raw checkout link with a fail-soft preflight. Deterministic 404
-  and 500 fixtures keep the user on the free desk with a next-step message;
-  redirects still go to the documented Sociobot checkout URL. No attempt was
-  made to repair or probe the environment-gated shared checkout registration.
-- Added a designed static `404.html` and Static Web Apps 404 response override.
-  Static routes are physical `demo/`, `privacy/`, and `terms/` entries; unknown
-  production routes now receive an actual 404 instead of an app-shell 200.
-- Route changes focus the new `<h1>` and announce the destination. Added
-  canonical, Open Graph, Twitter, and Apple Touch metadata, a derived original
-  1200×630 social image, footer factory/build identity, sitemap demo entry, and
-  PWA cache version 4.
-- Added `demo.md`, `copy-audit.md`, deployment regression coverage, and a lint
-  command. The design record now documents the social-image derivative.
+All 15 registry commands in `.factory/claims.json` passed when individually
+run from `/demo`; cold first-read, demo isolation, core approval handoff,
+offline reload, privacy request logging, responsive/keyboard checks, Axe
+serious/critical checks, header/caching checks, API rate limiting, clean
+install, type/lint, unit tests, and the exact production build otherwise
+passed. The 22 served artifacts matched the candidate byte-for-byte.
 
-## Verification evidence
+See [verification-5.md](verification-5.md) for exact commands, results,
+checks, headers, and the full defect register.
 
-Run from a clean `npm ci --include=dev` install on 2026-08-30 UTC:
+## How to reproduce
 
 ```sh
-npm audit --json                         # 0 vulnerabilities
-npm run typecheck                         # pass
-npm run lint                              # pass
-npm run test:unit                         # 5/5 pass
-npm run test:claims                       # 30/30 desktop + 390 px cases pass
-npm test                                  # 57 pass, 3 existing documented skips
-npm run build                             # pass; dist/index.html exists
+npm ci
+npm run test:claims -- --grep @claim:local-encryption
+npm test                 # currently fails intermittently at this claim
+npm run build
 ```
 
-The exact claims registry cross-check confirms all 15 IDs appear once and only
-once in the tagged test suite. Claim coverage includes demo isolation, approval
-release/sealing, AES-GCM storage, exact 15 MiB boundaries, same-origin free
-traffic, dedicated-context offline reload, portable export/import, deletion,
-five-gate limit and $29 Pro copy, license restore/revocation, PWA worker, and
-the checkout 404/500 fixture.
+The live product demo is `/demo`; it contains three isolated sample gates.
 
-`/opt/fleet/lib/verify-url.sh` against local production preview passed: HTTP
-200, title, `lang`, one `<h1>`, `<main>`, image alt coverage, desktop/mobile
-screenshots, and zero console errors. The Playwright Axe integration in the
-full suite passed with zero violations. The standalone Axe CLI could not start
-because its Selenium Chrome driver is incompatible with the bundled
-Chrome-for-Testing binary; it is redundant with the passing Playwright Axe
-integration.
+## Required next steps
 
-Lighthouse 13.4.1 against the local production preview (mobile default):
-
-| Category | Score |
-| --- | ---: |
-| Performance | 100 |
-| Accessibility | 100 |
-| Best Practices | 100 |
-| SEO | 100 |
-
-LCP was 1,280 ms and CLS was 0. The final initial bundle is 55,125 B raw /
-17,263 B gzip JavaScript and 21,766 B raw / 5,736 B gzip CSS, within the static
-budgets. Full browser coverage includes desktop, exact 390×844 mobile,
-keyboard route focus, 200% text, reduced motion, touch targets, privacy,
-offline reload/mutation, and service-worker update behavior.
-
-## Deploy and operate
-
-Deploy the contents of `dist/` as the existing static artifact. `main` is the
-repository deployment branch; there is no product-owned server, database,
-infrastructure, billing configuration, or live external service to modify.
-The existing host settings in `staticwebapp.config.json` provide the CSP,
-cache policy, and static 404 response.
-
-Repair commit `b4de5cd` was pushed to `origin/main` on 2026-08-30 UTC for the
-work order’s static deployment path.
-
-Try the shipped sandbox at `/demo`. See [`demo.md`](demo.md) for sample data,
-storage separation, reset behavior, and the verifier entry point.
-
-## Known external condition
-
-The shared factory checkout endpoint previously returned 404/500 in the
-environment. That registration is outside this product’s static repository.
-The UI now handles it safely and its deterministic 404/500 regression test
-passes; a successful hosted redirect should be confirmed by the factory after
-the registered checkout is available. The free product remains usable if it is
-not.
+- Make the encryption persistence/claim boundary deterministic and demonstrate
+  repeated clean `npm test` passes.
+- Restore the product’s hosted Sociobot checkout registration, then test a
+  real redirect/return and license verification without weakening the current
+  safe failure path.
