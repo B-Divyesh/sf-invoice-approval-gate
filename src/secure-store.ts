@@ -1,10 +1,21 @@
 import type { EncryptedDocument, Gate, PortableDocument, PortableGate, SendGateExport } from './types';
 
-const DB_NAME = 'send-gate-local';
+const REAL_DB_NAME = 'send-gate-local';
 const DB_VERSION = 1;
 const GATE_STORE = 'gates';
-const KEY_STORAGE = 'sendgate:document-key';
+const REAL_KEY_STORAGE = 'sendgate:document-key';
 export const MAX_FILE_BYTES = 15 * 1024 * 1024;
+
+// Demo records must never share a browser namespace with a person's desk.
+// This is configured before the app opens IndexedDB on every page load.
+let databaseName = REAL_DB_NAME;
+let keyStorage = REAL_KEY_STORAGE;
+
+export function configureStorageNamespace(namespace?: string): void {
+  const prefix = namespace ? `${namespace}:` : '';
+  databaseName = `${prefix}${REAL_DB_NAME}`;
+  keyStorage = `${prefix}${REAL_KEY_STORAGE}`;
+}
 
 const GATE_STATUSES = ['draft', 'awaiting', 'approved', 'rejected', 'sent'] as const;
 const GATE_KINDS = ['invoice', 'quote'] as const;
@@ -29,7 +40,7 @@ function transactionDone(transaction: IDBTransaction): Promise<void> {
 
 export function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const request = indexedDB.open(databaseName, DB_VERSION);
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(GATE_STORE)) {
@@ -109,11 +120,11 @@ function base64ToBytes(value: string): Uint8Array {
 }
 
 async function deviceKey(): Promise<CryptoKey> {
-  let encoded = localStorage.getItem(KEY_STORAGE);
+  let encoded = localStorage.getItem(keyStorage);
   if (!encoded) {
     const raw = crypto.getRandomValues(new Uint8Array(32));
     encoded = bytesToBase64(raw);
-    localStorage.setItem(KEY_STORAGE, encoded);
+    localStorage.setItem(keyStorage, encoded);
   }
   const raw = base64ToBytes(encoded);
   return crypto.subtle.importKey('raw', raw as BufferSource, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
@@ -130,7 +141,7 @@ function hasPdfHeader(bytes: Uint8Array): boolean {
 
 export async function validatePdfFile(file: File): Promise<void> {
   if (!file.size) throw new Error('Choose a PDF file that is not empty, or use a secure share link.');
-  if (file.size > MAX_FILE_BYTES) throw new Error('That PDF is larger than 15 MB. Use a smaller PDF or a secure share link.');
+  if (file.size > MAX_FILE_BYTES) throw new Error('That PDF is larger than 15 MiB. Use a smaller PDF or a secure share link.');
   const hasPdfIdentity = file.type === 'application/pdf' || (!file.type && file.name.toLowerCase().endsWith('.pdf'));
   if (!hasPdfIdentity || !hasPdfHeader(new Uint8Array(await file.slice(0, 1024).arrayBuffer()))) {
     throw new Error('That file is not a valid PDF. Choose a PDF document or use a secure share link.');

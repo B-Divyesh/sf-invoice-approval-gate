@@ -13,11 +13,11 @@ async function fillLinkGate(page: import('@playwright/test').Page, title = 'Work
 
 test('empty desk is accessible and creates an approval through send handoff', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Nothing leaves without a second look.');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Approve quotes and invoices before they go out.');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   expect(await new AxeBuilder({ page }).analyze()).toMatchObject({ violations: [] });
 
-  await page.getByRole('button', { name: /Create your first gate/ }).click();
+  await page.getByRole('button', { name: /Create an approval gate/ }).click();
   await page.getByLabel('Type').selectOption('quote');
   await fillLinkGate(page);
   await page.getByRole('button', { name: /Create draft gate/ }).click();
@@ -74,7 +74,7 @@ test('settings Pro ribbon and sent-state explanation meet the AA contrast gate',
 test('PDFs are encrypted in storage and can be released after approval', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'mobile', 'Covered once in Chromium; mobile exercises the link workflow.');
   await page.goto('/');
-  await page.getByRole('button', { name: /Create your first gate/ }).click();
+  await page.getByRole('button', { name: /Create an approval gate/ }).click();
   await page.getByLabel('Gate name').fill('Encrypted PDF gate');
   await page.getByLabel('PDF file').setInputFiles({
     name: 'invoice.pdf',
@@ -114,7 +114,7 @@ test('installed app shell and saved gate work offline', async ({ page, context }
   await page.goto('/');
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.reload();
-  await page.getByRole('button', { name: /Create your first gate/ }).click();
+  await page.getByRole('button', { name: /Create an approval gate/ }).click();
   await page.getByLabel('Gate name').fill('Offline invoice');
   await page.getByText('Copied share link', { exact: true }).click();
   await page.getByLabel('Secure share link').fill('https://example.com/offline');
@@ -279,7 +279,7 @@ test('oversized PDF can recover by switching to a link and fake PDFs are rejecte
     name: 'too-large.pdf', mimeType: 'application/pdf', buffer: Buffer.alloc(15 * 1024 * 1024 + 1, 1),
   });
   await page.getByRole('button', { name: /Create draft gate/ }).click();
-  await expect(page.getByText('That PDF is larger than 15 MB. Use a smaller PDF or a secure share link.')).toBeVisible();
+  await expect(page.getByText('That PDF is larger than 15 MiB. Use a smaller PDF or a secure share link.')).toBeVisible();
   await page.getByText('Copied share link', { exact: true }).click();
   await page.getByLabel('Secure share link').fill('https://example.com/recovered');
   await page.getByRole('button', { name: /Create draft gate/ }).click();
@@ -325,7 +325,7 @@ test('invalid returned license resolves checking feedback and restores purchase 
   await page.goto('/?view=settings&license=qa-verification-invalid-token');
   await expect(page).not.toHaveURL(/license=/);
   await expect(page.getByText('That license is not active for Send Gate. Free features and purchase options remain available.')).toBeVisible();
-  await expect(page.getByRole('link', { name: /Buy Pro securely/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Buy Pro securely/ })).toBeVisible();
   await expect(page.getByText('Have a license? Restore purchase')).toBeVisible();
   await expect(page.getByText(/Checking your unlock/)).toHaveCount(0);
 });
@@ -372,4 +372,32 @@ test('an active service worker never caches a returned license URL', async ({ pa
     return keys.flat().map((request) => request.url);
   });
   expect(cachedUrls.some((url) => url.includes('license='))).toBe(false);
+});
+
+test('route changes move keyboard focus to the new h1 and announce the destination', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Settings' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: 'Your desk, your data.' })).toBeFocused();
+  await expect(page.locator('#route-announcer')).toHaveText('Now viewing Your desk, your data.');
+  await page.goBack();
+  await expect(page.getByRole('heading', { name: 'Approve quotes and invoices before they go out.' })).toBeFocused();
+  await expect(page.locator('#route-announcer')).toHaveText('Now viewing Approve quotes and invoices before they go out.');
+});
+
+test('route metadata, build identity, and onboarding labels are complete without truncation', async ({ page }, testInfo) => {
+  await page.goto('/');
+  await expect(page).toHaveTitle('Send Gate — Approve quotes before sending');
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://invoice-approval-gate.sociobot.in/');
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /send-gate-social-1200x630\.jpg$/);
+  await expect(page.getByText('Built by Param Factory · v1.0.1 · build repair-4')).toBeVisible();
+  const labelsFit = await page.locator('.how-strip small').evaluateAll((labels) => labels.every((label) => label.scrollWidth <= label.clientWidth));
+  expect(labelsFit).toBe(true);
+  if (testInfo.project.name === 'mobile') {
+    const strip = await page.locator('.how-strip').evaluate((element) => ({ scrollWidth: element.scrollWidth, clientWidth: element.clientWidth }));
+    expect(strip.scrollWidth).toBeLessThanOrEqual(strip.clientWidth);
+  }
+  await page.goto('/privacy/');
+  await expect(page).toHaveTitle('Privacy — Send Gate');
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://invoice-approval-gate.sociobot.in/privacy');
 });

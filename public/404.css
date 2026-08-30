@@ -1,0 +1,20 @@
+:root { color-scheme: light; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #17211d; background: #f4eedc; }
+* { box-sizing: border-box; }
+body { min-width: 320px; min-height: 100vh; margin: 0; display: grid; grid-template-rows: auto 1fr auto; background-color: #f4eedc; background-image: radial-gradient(#b7aa8a55 .7px, transparent .7px); background-size: 7px 7px; font-size: 16px; line-height: 1.55; }
+a { color: #174c3c; text-underline-offset: 3px; }
+:focus-visible { outline: 3px solid #d9573f; outline-offset: 3px; }
+.skip-link { position: fixed; z-index: 3; top: -80px; left: 16px; padding: 12px 18px; color: #fff; background: #17211d; font-weight: 800; }
+.skip-link:focus { top: 12px; }
+.site-header { min-height: 76px; display: flex; align-items: center; padding: 12px max(24px, calc((100vw - 1280px) / 2)); background: #fffdf6; border-bottom: 1px solid #c6bea8; }
+.brand { min-height: 44px; display: inline-flex; align-items: center; gap: 11px; color: #17211d; font: 700 22px/1 Georgia, "Times New Roman", serif; text-decoration: none; }
+.brand-mark { width: 37px; height: 37px; display: grid; place-items: center; color: #fff; background: #174c3c; box-shadow: 4px 4px 0 #c8d4b4; font-weight: 900; }
+main { width: min(780px, calc(100% - 48px)); margin: 0 auto; padding: 13vh 0 96px; }
+.eyebrow { margin: 0 0 10px; color: #a93625; font-size: 13px; font-weight: 900; letter-spacing: .13em; }
+h1 { max-width: 12ch; margin: 0 0 28px; font: 700 clamp(40px, 7vw, 64px)/.98 Georgia, "Times New Roman", serif; letter-spacing: -.035em; }
+main p:not(.eyebrow) { max-width: 48ch; color: #4e5d55; font-size: 18px; }
+.primary { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; padding: 11px 18px; color: #fff; background: #174c3c; border: 2px solid #174c3c; box-shadow: 5px 5px 0 #c8d4b4; font-weight: 850; text-decoration: none; }
+footer { min-height: 90px; display: flex; flex-wrap: wrap; align-items: center; gap: 18px 34px; padding: 22px max(24px, calc((100vw - 1280px) / 2)); color: #dce8de; background: #0d352a; font-size: 13px; }
+footer p { margin: 0; }
+footer nav { display: flex; gap: 20px; }
+footer a { min-height: 44px; display: inline-flex; align-items: center; color: #fff; }
+@media (max-width: 760px) { .site-header { padding-inline: 14px; } main { width: min(100% - 28px, 780px); padding-top: 11vh; } footer { align-items: flex-start; flex-direction: column; padding: 28px 18px; } }

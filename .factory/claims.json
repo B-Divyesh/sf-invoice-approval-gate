@@ -1,0 +1,107 @@
+[
+  {
+    "id": "checkout-fail-soft",
+    "claim": "If hosted checkout is unavailable, Send Gate keeps the free desk usable and explains the next step.",
+    "where": "Settings Pro purchase control",
+    "test": "npm run test:claims -- --grep @claim:checkout-fail-soft",
+    "sandbox": "fresh /demo browser context; deterministic intercepted 404 then 500 checkout responses; assert no navigation and the recovery notice"
+  },
+  {
+    "id": "demo-sandbox",
+    "claim": "Try three sample gates without changing your real desk.",
+    "where": "landing primary action, /demo banner, README",
+    "test": "npm run test:claims -- --grep @claim:demo-sandbox",
+    "sandbox": "fresh /demo browser context; assert demo: IndexedDB namespace, three samples, reset, and Start for real"
+  },
+  {
+    "id": "approval-handoff",
+    "claim": "A client email draft is released only after a reviewer records an approval.",
+    "where": "landing preview, approval sheet, README",
+    "test": "npm run test:claims -- --grep @claim:approval-handoff",
+    "sandbox": "fresh /demo browser context; approve the awaiting sample with a required comment and assert its mailto handoff"
+  },
+  {
+    "id": "sealed-handoff",
+    "claim": "A handoff marked sent cannot be sent again from that gate.",
+    "where": "sent state, README",
+    "test": "npm run test:claims -- --grep @claim:sealed-handoff",
+    "sandbox": "fresh /demo browser context; mark the approved sample sent and assert the email-draft action is absent"
+  },
+  {
+    "id": "local-encryption",
+    "claim": "PDFs are AES-GCM encrypted before local IndexedDB storage.",
+    "where": "landing facts, form help, Privacy, README",
+    "test": "npm run test:claims -- --grep @claim:local-encryption",
+    "sandbox": "fresh /demo browser context; add a fixture PDF and assert ciphertext, ciphertext growth, and no plaintext PDF marker in IndexedDB"
+  },
+  {
+    "id": "pdf-size-limit",
+    "claim": "Accepts PDFs up to 15 MiB and rejects a PDF one byte larger.",
+    "where": "PDF form help and validation error",
+    "test": "npm run test:claims -- --grep @claim:pdf-size-limit",
+    "sandbox": "fresh /demo browser context; create a gate with an exact 15 MiB fixture PDF, then assert a 15 MiB plus one byte fixture is rejected"
+  },
+  {
+    "id": "private-free-workflow",
+    "claim": "Normal free workflows make only same-origin requests and do not upload gate data.",
+    "where": "Privacy, footer, README",
+    "test": "npm run test:claims -- --grep @claim:private-free-workflow",
+    "sandbox": "fresh /demo browser context; record every request during sample review and assert the sole origin is the product origin"
+  },
+  {
+    "id": "offline-reload",
+    "claim": "Works offline after the first visit.",
+    "where": "landing facts, README",
+    "test": "npm run test:claims -- --grep @claim:offline-reload",
+    "sandbox": "dedicated browser.newContext(); visit /demo, wait for the worker, setOffline(true), reload, approve a sample, and assert the handoff"
+  },
+  {
+    "id": "portable-export",
+    "claim": "Exports approval records as a portable JSON backup.",
+    "where": "Settings data controls, Privacy, README",
+    "test": "npm run test:claims -- --grep @claim:portable-export",
+    "sandbox": "fresh /demo browser context; download the sample export and assert product identity, three records, and the readable-backup warning"
+  },
+  {
+    "id": "portable-import",
+    "claim": "Imports a valid portable JSON backup into the current desk.",
+    "where": "Settings data controls",
+    "test": "npm run test:claims -- --grep @claim:portable-import",
+    "sandbox": "fresh /demo browser context; upload a deterministic valid link-gate backup, confirm replacement, and assert the restored gate on the desk"
+  },
+  {
+    "id": "deletion",
+    "claim": "Deleting a named gate removes it from this browser’s approval desk.",
+    "where": "Settings deletion note, approval desk",
+    "test": "npm run test:claims -- --grep @claim:deletion",
+    "sandbox": "fresh /demo browser context; confirm deletion of a named sample gate and assert it is absent from the demo IndexedDB record and rail"
+  },
+  {
+    "id": "free-active-limit",
+    "claim": "The free desk allows five active gates, and Pro displays a $29 one-time offer for unlimited active gates.",
+    "where": "Settings Pro offer, README",
+    "test": "npm run test:claims -- --grep @claim:free-active-limit",
+    "sandbox": "fresh /demo browser context; add two link gates to the three samples, assert the sixth active-gate form shows the limit, then assert the Pro price and unlimited-gates copy"
+  },
+  {
+    "id": "license-restore",
+    "claim": "A valid license token restores Pro on another device.",
+    "where": "Settings restore-purchase control",
+    "test": "npm run test:claims -- --grep @claim:license-restore",
+    "sandbox": "fresh /demo browser context; deterministic recorded valid verify response after pasting a token; assert active Pro status"
+  },
+  {
+    "id": "license-revocation",
+    "claim": "An inactive license leaves the free desk available.",
+    "where": "Settings inactive-license notice, Terms",
+    "test": "npm run test:claims -- --grep @claim:license-revocation",
+    "sandbox": "fresh /demo browser context; deterministic recorded invalid verify response for a returned token; assert recovery notice, purchase control, and usable approval desk"
+  },
+  {
+    "id": "pwa-shell",
+    "claim": "Send Gate provides an installable PWA shell.",
+    "where": "README",
+    "test": "npm run test:claims -- --grep @claim:pwa-shell",
+    "sandbox": "fresh /demo browser context; assert standalone manifest/icons, wait for worker readiness, reload, and assert a controlling service worker"
+  }
+]

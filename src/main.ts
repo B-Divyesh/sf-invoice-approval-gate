@@ -11,9 +11,12 @@ import {
   putGate,
   readExport,
   replaceAllGates,
+  configureStorageNamespace,
 } from './secure-store';
 import {
+  beginCheckout,
   checkoutUrl,
+  configureBillingNamespace,
   hasLicense,
   isProFromCache,
   PRICE_LABEL,
@@ -22,6 +25,7 @@ import {
   storeReturnedLicense,
   verifyLicense,
 } from './billing';
+import { isDemoRoute, sampleGates } from './demo';
 import { emailDraftUrl, escapeHtml as e, formatDate, formatMoney, newAudit, safeHttpUrl, sendNote, statusCopy } from './utils';
 
 type AppView = 'desk' | 'new' | 'settings';
@@ -29,6 +33,7 @@ type AppView = 'desk' | 'new' | 'settings';
 const FREE_ACTIVE_LIMIT = 5;
 class SendGateApp {
   private readonly root: HTMLElement;
+  private readonly demo = isDemoRoute();
   private gates: Gate[] = [];
   private selectedId: string | null = null;
   private view: AppView = 'desk';
@@ -55,6 +60,10 @@ class SendGateApp {
     this.routeFromUrl(false);
     try {
       this.gates = await getGates();
+      if (this.demo && !this.gates.length) {
+        await replaceAllGates(sampleGates());
+        this.gates = await getGates();
+      }
       this.selectedId = this.selectedId ?? this.gates[0]?.id ?? null;
     } catch (error) {
       this.storageError = error instanceof Error ? error.message : 'Private local storage could not be opened.';
@@ -84,11 +93,15 @@ class SendGateApp {
     const requested = params.get('gate');
     if (requested) this.selectedId = requested;
     this.editing = params.get('edit') === '1';
-    if (render) this.render();
+    if (render) {
+      this.render();
+      this.focusRouteHeading();
+    }
   }
 
   private go(url: string): void {
-    history.pushState({}, '', url);
+    const destination = this.demo && (url === '/' || url.startsWith('/?')) ? `/demo${url.slice(1)}` : url;
+    history.pushState({}, '', destination);
     this.routeFromUrl();
     window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }
@@ -100,11 +113,20 @@ class SendGateApp {
   private render(): void {
     const path = location.pathname.replace(/\/$/, '') || '/';
     if (path === '/privacy' || path === '/terms') {
+      this.setPageMetadata(path === '/privacy' ? 'Privacy — Send Gate' : 'Terms — Send Gate', path === '/privacy'
+        ? 'How Send Gate stores approval records and documents on your device.'
+        : 'Terms for using Send Gate, a local approval checkpoint for quotes and invoices.', path);
       this.root.innerHTML = this.legalPage(path.slice(1) as 'privacy' | 'terms');
-      document.title = `${path === '/privacy' ? 'Privacy' : 'Terms'} — Send Gate`;
       return;
     }
-    document.title = 'Send Gate — Invoice approval checkpoint';
+    if (path !== '/' && path !== '/demo') {
+      this.setPageMetadata('Page not found — Send Gate', 'This Send Gate page does not exist. Return to the approval desk.', path);
+      this.root.innerHTML = this.notFoundPage();
+      return;
+    }
+    this.setPageMetadata(this.demo ? 'Demo — Send Gate' : 'Send Gate — Approve quotes before sending', this.demo
+      ? 'Try Send Gate with isolated sample quotes and invoices.'
+      : 'A local approval checkpoint for small agencies and trade teams before a quote or invoice reaches a client.', this.demo ? '/demo' : '/');
     const offline = !navigator.onLine;
     this.root.innerHTML = `
       <header class="site-header">
@@ -114,21 +136,53 @@ class SendGateApp {
         </a>
         <nav aria-label="Primary navigation">
           <a href="/" data-route="/" ${this.view === 'desk' || this.view === 'new' ? 'aria-current="page"' : ''}>Approval desk</a>
+          <a href="/demo" data-route="/demo" ${this.demo ? 'aria-current="page"' : ''}>Try sample</a>
           <a href="/?view=settings" data-route="/?view=settings" ${this.view === 'settings' ? 'aria-current="page"' : ''}>Settings</a>
         </nav>
         <span class="local-pill"><span aria-hidden="true">${offline ? '○' : '●'}</span> ${offline ? 'Offline' : 'On this device'}</span>
       </header>
       ${offline ? `<div class="offline-strip" role="status"><strong>Offline.</strong> Saved gates still work; email, source links, and license checks need a connection.</div>` : ''}
       ${this.notice ? `<div class="notice-strip" role="status"><span>${e(this.notice)}</span><button class="text-button" data-action="dismiss-notice">Dismiss</button></div>` : ''}
+      ${this.demo ? `<aside class="demo-banner" aria-label="Demo controls"><strong>Demo — sample data, nothing is saved.</strong><span>Try the review flow safely.</span><button class="text-button" data-action="reset-demo">Reset demo</button><button class="text-button" data-action="start-real">Start for real</button></aside>` : ''}
+      <p id="route-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></p>
       ${this.storageError ? this.storageFailure() : this.view === 'settings' ? this.settingsPage() : this.view === 'new' ? this.gateForm() : this.deskPage()}
-      <footer class="site-footer">
-        <p><span class="mini-mark" aria-hidden="true">▰</span> Private by default. No account, analytics, or remote document upload.</p>
-        <nav aria-label="Legal"><a href="/privacy" data-route="/privacy">Privacy</a><a href="/terms" data-route="/terms">Terms</a></nav>
-        <p class="art-note">Original AI-assisted paper artwork, made for Send Gate.</p>
-      </footer>
+      ${this.footer()}
       <div class="toast-region" aria-live="polite" aria-atomic="true">
         ${this.updateWorker ? `<div class="toast"><span>A fresh version is ready.</span><button data-action="update-app">Update now</button></div>` : ''}
       </div>`;
+  }
+
+  private setPageMetadata(title: string, description: string, path: string): void {
+    document.title = title;
+    const canonical = `https://invoice-approval-gate.sociobot.in${path === '/' ? '/' : path}`;
+    document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.setAttribute('href', canonical);
+    document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', description);
+    document.querySelector<HTMLMetaElement>('meta[property="og:title"]')?.setAttribute('content', title);
+    document.querySelector<HTMLMetaElement>('meta[property="og:description"]')?.setAttribute('content', description);
+    document.querySelector<HTMLMetaElement>('meta[property="og:url"]')?.setAttribute('content', canonical);
+    document.querySelector<HTMLMetaElement>('meta[name="twitter:title"]')?.setAttribute('content', title);
+    document.querySelector<HTMLMetaElement>('meta[name="twitter:description"]')?.setAttribute('content', description);
+  }
+
+  private focusRouteHeading(): void {
+    requestAnimationFrame(() => {
+      const heading = document.querySelector<HTMLElement>('#main h1');
+      if (!heading) return;
+      heading.tabIndex = -1;
+      heading.focus({ preventScroll: true });
+      const announcement = document.querySelector<HTMLElement>('#route-announcer');
+      const routeName = (heading.textContent?.trim() ?? document.title).replace(/[.!?]$/, '');
+      if (announcement) announcement.textContent = `Now viewing ${routeName}.`;
+    });
+  }
+
+  private footer(): string {
+    return `<footer class="site-footer">
+      <p><span class="mini-mark" aria-hidden="true">▰</span> Local approval records stay in this browser.</p>
+      <nav aria-label="Legal"><a href="/privacy" data-route="/privacy">Privacy</a><a href="/terms" data-route="/terms">Terms</a></nav>
+      <p class="art-note">Original AI-assisted paper artwork, made for Send Gate.</p>
+      <p class="build-note">Built by Param Factory · v1.0.1 · build repair-4</p>
+    </footer>`;
   }
 
   private storageFailure(): string {
@@ -160,13 +214,15 @@ class SendGateApp {
   private emptyDesk(): string {
     return `<main id="main" class="empty-main" tabindex="-1">
       <section class="hero-copy">
-        <p class="eyebrow">A second pair of eyes, before send</p>
-        <h1>Nothing leaves without a second look.</h1>
-        <p class="lede">Put a quote or invoice at a simple approval checkpoint. The final email handoff stays locked until your reviewer says it is ready.</p>
+        <p class="eyebrow">Approval before client handoff</p>
+        <h1>Approve quotes and invoices before they go out.</h1>
+        <p class="lede">For small agencies and trade teams that need a second reviewer before a client gets a quote or invoice.</p>
         <div class="hero-actions">
-          <button class="primary paper-button" data-action="new-gate">Create your first gate <span aria-hidden="true">→</span></button>
-          <span>No account · works offline · PDFs encrypted locally</span>
+          <a class="primary paper-button" href="/demo" data-route="/demo">Try it with sample data <span aria-hidden="true">→</span></a>
+          <span>Loads three sample gates. Nothing is saved.</span>
+          <button class="secondary" data-action="new-gate">Create an approval gate</button>
         </div>
+        <ul class="plain-facts" aria-label="Send Gate facts"><li>Works offline after the first visit.</li><li>PDFs encrypt before local storage.</li><li>$29 once unlocks unlimited active gates.</li></ul>
         <ol class="how-strip" aria-label="How Send Gate works" tabindex="0">
           <li><span>1</span><strong>Place</strong><small>Add a PDF or link</small></li>
           <li><span>2</span><strong>Check</strong><small>Approve or return</small></li>
@@ -178,7 +234,7 @@ class SendGateApp {
           <source media="(max-width: 760px)" srcset="/assets/send-gate-diorama-640.webp" />
           <img src="/assets/send-gate-diorama-1280.webp" width="1280" height="853" alt="A miniature blank paper sheet paused at a forest-green approval gate before an outgoing tray" decoding="async" fetchpriority="high" />
         </picture>
-        <figcaption>One small checkpoint between “finished” and “sent.”</figcaption>
+        <figcaption>A document waits for a recorded approval before you send it.</figcaption>
       </figure>
     </main>`;
   }
@@ -319,7 +375,7 @@ class SendGateApp {
           </fieldset>
           <div id="pdf-field" ${source !== 'pdf' ? 'hidden' : ''}>
             <label for="document-file">${gate?.document ? 'Replace PDF (optional)' : 'PDF file'}<input id="document-file" name="document" type="file" accept="application/pdf,.pdf" ${!gate?.document && source === 'pdf' ? 'required' : ''} aria-describedby="file-help" /></label>
-            <p id="file-help" class="field-help">Up to 15 MB. ${encryptionSupported() ? 'AES-GCM encryption is available.' : 'File encryption is unavailable; use a link.'}${gate?.document ? ` Current: ${e(gate.document.name)}` : ''}</p>
+            <p id="file-help" class="field-help">Up to 15 MiB. ${encryptionSupported() ? 'AES-GCM encryption is available.' : 'File encryption is unavailable; use a link.'}${gate?.document ? ` Current: ${e(gate.document.name)}` : ''}</p>
           </div>
           <div id="link-field" ${source !== 'link' ? 'hidden' : ''}>
             <label for="share-link">Secure share link<input id="share-link" name="shareLink" type="url" inputmode="url" placeholder="https://…" value="${e(gate?.shareLink ?? '')}" ${source === 'link' ? 'required' : ''} /></label>
@@ -361,11 +417,12 @@ class SendGateApp {
           <div class="button-row"><button class="secondary" data-action="export-data" ${this.gates.length ? '' : 'disabled'}>Export ${this.gates.length || ''} ${this.gates.length === 1 ? 'gate' : 'gates'}</button><label class="file-button">Import backup<input id="import-file" type="file" accept="application/json,.json" /></label></div></div>
         </section>
         <section class="settings-section pro-sheet" aria-labelledby="pro-heading">
-          <div class="pro-ribbon">One-time</div><div class="settings-icon" aria-hidden="true">∞</div><div><p class="eyebrow">Send Gate Pro</p><h2 id="pro-heading">A bigger desk, not a subscription.</h2><p>Unlock unlimited active gates for growing teams. The complete five-gate workflow, encryption, decisions, deletion, and all data tools stay free.</p>
+          <div class="pro-ribbon">One-time</div><div class="settings-icon" aria-hidden="true">∞</div><div><p class="eyebrow">Send Gate Pro</p><h2 id="pro-heading">A bigger desk, not a subscription.</h2><p>Unlock unlimited active gates for growing teams. The five-gate desk stays available without Pro.</p>
           <p class="price">${PRICE_LABEL}<small>One-time purchase · for this product</small></p>
           ${this.pro ? `<div class="license-good" role="status">✓ Pro is active on this device.</div><button class="text-button" data-action="remove-license">Remove license from this device</button>` : `
             ${licensePresent ? `<p class="license-quiet">License no longer active or could not be verified. Free features are unchanged.</p>` : ''}
-            <a class="primary link-button" href="${e(checkoutUrl())}">Buy Pro securely <span aria-hidden="true">↗</span></a>
+            <button class="primary" data-action="buy-pro" data-checkout-url="${e(checkoutUrl())}">Buy Pro securely <span aria-hidden="true">↗</span></button>
+            <p id="checkout-error" class="field-error" role="alert"></p>
             <details class="restore"><summary>Have a license? Restore purchase</summary><form id="license-form"><label for="license-token">License token<input id="license-token" name="license" required autocomplete="off" spellcheck="false" /></label><button class="secondary" type="submit">Verify and unlock</button><p id="license-error" class="field-error" role="alert"></p></form></details>`}
           <p class="merchant-note">Checkout and refunds are handled by Sociobot/Dodo, the merchant of record. A refunded license is automatically revoked. <a href="/terms" data-route="/terms">Purchase terms</a></p></div>
         </section>
@@ -378,7 +435,8 @@ class SendGateApp {
 
   private legalPage(page: 'privacy' | 'terms'): string {
     const privacy = page === 'privacy';
-    return `<header class="site-header legal-header"><a class="brand" href="/" data-route="/"><span class="brand-mark" aria-hidden="true"><span></span></span><span>Send Gate</span></a><a href="/" data-route="/">Return to approval desk</a></header>
+    return `<header class="site-header legal-header"><a class="brand" href="/" data-route="/"><span class="brand-mark" aria-hidden="true"><span></span></span><span>Send Gate</span></a><nav aria-label="Primary navigation"><a href="/" data-route="/">Approval desk</a><a href="/demo" data-route="/demo">Try sample</a></nav><a href="/" data-route="/">Return to approval desk</a></header>
+      <p id="route-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></p>
       <main id="main" class="legal-main" tabindex="-1">
         <p class="eyebrow">Last updated 28 August 2026</p>
         <h1>${privacy ? 'Privacy, without fine print.' : 'Terms of use.'}</h1>
@@ -395,7 +453,14 @@ class SendGateApp {
           <h2>Acceptable use</h2><p>Do not use Send Gate to distribute unlawful, deceptive, infringing, or malicious material. You retain responsibility for your documents and communications.</p>
           <h2>Warranty and liability</h2><p>To the maximum extent allowed by law, the software is provided without warranties. The operator is not liable for lost browser data, missed approvals, incorrect documents, or messages sent through external email or link services.</p>`}
       </main>
-      <footer class="site-footer"><p>Send Gate · a local-first document checkpoint</p><nav aria-label="Legal"><a href="/privacy" data-route="/privacy">Privacy</a><a href="/terms" data-route="/terms">Terms</a></nav></footer>`;
+      ${this.footer()}`;
+  }
+
+  private notFoundPage(): string {
+    return `<header class="site-header"><a class="brand" href="/" data-route="/" aria-label="Send Gate home"><span class="brand-mark" aria-hidden="true"><span></span></span><span>Send Gate</span></a></header>
+      <p id="route-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></p>
+      <main id="main" class="error-page" tabindex="-1"><p class="eyebrow">404</p><h1>This page is not on the approval desk.</h1><p>Check the address, or return to your quotes and invoices.</p><a class="primary link-button" href="/" data-route="/">Return to approval desk</a></main>
+      ${this.footer()}`;
   }
 
   private async onClick(event: Event): Promise<void> {
@@ -413,6 +478,9 @@ class SendGateApp {
     if (action === 'new-gate') return this.go('/?new=1');
     if (action === 'back-desk') return this.go(this.selectedId ? `/?gate=${encodeURIComponent(this.selectedId)}` : '/');
     if (action === 'open-settings') return this.go('/?view=settings');
+    if (action === 'reset-demo' && this.demo) return void this.resetDemo();
+    if (action === 'start-real') { location.assign('/'); return; }
+    if (action === 'buy-pro') return void this.startCheckout();
     if (action === 'dismiss-notice') { this.notice = ''; return this.render(); }
     if (action === 'retry-storage') return void this.retryStorage();
     if (action === 'select-gate') {
@@ -528,7 +596,7 @@ class SendGateApp {
       let encrypted = sourceType === 'pdf' ? existing?.document : undefined;
       const replacesDocument = sourceType === 'pdf' && file instanceof File && file.size > 0;
       if (replacesDocument) {
-        if (file.size > MAX_FILE_BYTES) throw new Error('That PDF is larger than 15 MB. Use a smaller PDF or a secure share link.');
+        if (file.size > MAX_FILE_BYTES) throw new Error('That PDF is larger than 15 MiB. Use a smaller PDF or a secure share link.');
         encrypted = await encryptDocument(file);
       }
       if (sourceType === 'pdf' && !encrypted) throw new Error('Choose the PDF that needs approval.');
@@ -649,6 +717,23 @@ class SendGateApp {
     this.render();
   }
 
+  private async resetDemo(): Promise<void> {
+    await replaceAllGates(sampleGates());
+    await this.reload('demo-harbour-house');
+    this.notice = 'Demo reset to three sample gates.';
+    this.go('/');
+  }
+
+  private async startCheckout(): Promise<void> {
+    const result = await beginCheckout();
+    if (result === 'redirecting') return;
+    this.notice = result === 'offline'
+      ? 'Checkout needs a connection. Your free desk is still available.'
+      : 'Checkout is temporarily unavailable. Your free desk is unchanged. Please try again later or restore a purchase.';
+    this.render();
+    document.querySelector<HTMLElement>('#checkout-error')?.replaceChildren(this.notice);
+  }
+
   private async markSent(): Promise<void> {
     const gate = this.selected;
     if (!gate || gate.status !== 'approved') return;
@@ -764,4 +849,7 @@ class SendGateApp {
 
 const root = document.querySelector<HTMLElement>('#app');
 if (!root) throw new Error('Send Gate could not find its application root.');
+const demoNamespace = isDemoRoute() ? 'demo' : undefined;
+configureStorageNamespace(demoNamespace);
+configureBillingNamespace(demoNamespace);
 void new SendGateApp(root).init();

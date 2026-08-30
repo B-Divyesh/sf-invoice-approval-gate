@@ -7,7 +7,7 @@ function staticRoutes(): Plugin {
     name: 'send-gate-static-routes',
     apply: 'build',
     async closeBundle() {
-      for (const route of ['privacy', 'terms']) {
+      for (const route of ['privacy', 'terms', 'demo']) {
         const directory = resolve('dist', route);
         await mkdir(directory, { recursive: true });
         await copyFile(resolve('dist/index.html'), resolve(directory, 'index.html'));

@@ -1,16 +1,20 @@
-const CACHE_VERSION = 'send-gate-v3';
+const CACHE_VERSION = 'send-gate-v4';
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const CORE = [
   '/',
+  '/demo/',
   '/privacy/',
   '/terms/',
+  '/404.html',
+  '/404.css',
   '/offline.html',
   '/manifest.webmanifest',
   '/icon.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/icon-maskable-512.png',
+  '/icons/apple-touch-icon.png',
   '/assets/send-gate-diorama-640.webp',
   '/assets/send-gate-diorama-1280.webp',
 ];

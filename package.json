@@ -6,11 +6,13 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "vitest run tests/utils.test.ts && playwright test",
-    "test:unit": "vitest run tests/utils.test.ts",
-    "test:e2e": "playwright test"
+    "test": "vitest run tests/*.test.ts && playwright test",
+    "test:unit": "vitest run tests/*.test.ts",
+    "test:e2e": "playwright test",
+    "test:claims": "playwright test tests/e2e/claims.spec.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.2",

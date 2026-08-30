@@ -112,3 +112,8 @@ no watermark, no currency symbols, no hands, no screens, no glossy plastic.”
 
 Generated with the Factory Azure OpenAI image deployment (`factory-image`) on
 2026-08-28. Original asset made for Send Gate; no third-party artwork.
+
+`public/assets/send-gate-social-1200x630.jpg` is a 1200×630 center crop derived
+from the reviewed 1280 px original for social metadata on 2026-08-30. It adds
+no new generated content or text. `public/icons/apple-touch-icon.png` is a
+180 px resize of the hand-authored Send Gate icon.

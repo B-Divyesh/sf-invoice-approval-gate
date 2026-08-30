@@ -1,8 +1,8 @@
 {
-  "name": "Send Gate — Invoice approval checkpoint",
+  "name": "Send Gate — Approve quotes before sending",
   "short_name": "Send Gate",
-  "description": "A private, local-first second-pair-of-eyes checkpoint before a quote or invoice is sent.",
-  "start_url": "/?source=pwa&v=2",
+  "description": "Approve quotes and invoices before they go out.",
+  "start_url": "/?source=pwa&v=4",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",

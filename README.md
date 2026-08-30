@@ -1,28 +1,28 @@
 # Send Gate
 
-Send Gate is a local-first approval checkpoint for small agencies and trade
-businesses. Add a quote or invoice PDF (or a secure share link), name the
-client and reviewer, and record an approve/return decision before the final
-email handoff is released. It is deliberately not an invoice generator,
-ledger, payment processor, e-signature tool, or CRM.
+Approve quotes and invoices before they go out. Send Gate is for small agencies
+and trade teams that need a recorded second review before a client handoff.
+Try it in one click at [`/demo`](https://invoice-approval-gate.sociobot.in/demo):
+three sample gates load in an isolated browser namespace, and nothing is saved
+to a real desk.
 
 Live product: <https://invoice-approval-gate.sociobot.in>
 
-## What v1 includes
+## What it does
 
-- A complete draft → review → approved/returned → sent workflow.
-- A user-controlled `mailto:` draft only after approval; PDFs are downloaded
-  for the user to attach, never sent automatically.
-- An immutable-style timestamped audit trail and sealed sent state to reduce
-  duplicate sends.
-- PDF encryption with browser Web Crypto (AES-GCM) before IndexedDB storage.
-- Explicit per-gate deletion plus portable JSON export/import. Portable exports
-  are intentionally readable so they can be restored elsewhere and must be
-  kept private.
-- Installable PWA shell, offline creation/review, and offline legal pages.
-- A genuinely useful free desk with five active gates. The optional $29
-  one-time Pro license unlocks unlimited active gates through the Sociobot
-  billing API; no payment provider is embedded here.
+- The email draft appears only after a reviewer records an approval.
+- A sent handoff cannot be sent again from the same gate.
+- PDFs use browser AES-GCM encryption before local IndexedDB storage.
+- Free workflow data stays in the browser and makes same-origin requests only.
+- The free desk has five active gates. Pro is $29 once for unlimited active
+  gates.
+- Export creates a portable JSON backup. It can contain readable PDF data, so
+  keep the downloaded file private.
+- The installable PWA works offline after its first visit.
+
+Every statement above has an executable sandbox check in
+[`.factory/claims.json`](.factory/claims.json). Run all of them with
+`npm run test:claims`.
 
 ## Run and verify
 
@@ -32,16 +32,17 @@ Requires Node.js 22 or a compatible current LTS release.
 npm ci --include=dev
 npm run dev
 npm run typecheck
+npm run test:unit
+npm run test:claims
 npm test
 npm run build
 npm run preview
 ```
 
 `npm test` runs Vitest and Playwright 1.58.2 in desktop and exact 390 px mobile
-viewports. Coverage includes axe, the complete approval handoff, approval
-withdrawal after edits, atomic import rejection, encrypted PDF persistence and
-restore, input/file recovery, licensing feedback, keyboard/touch geometry,
-direct legal routes, and an explicit offline reload/mutation test.
+viewports. It covers accessibility, the approval handoff, import protection,
+encryption, keyboard/mobile behavior, legal routes, metadata, and offline
+reload. `npm run test:claims` runs the complete one-click demo claim suite.
 
 The exact production build command is:
 
@@ -50,7 +51,8 @@ npm run build
 ```
 
 It writes the static deployment to `./dist/`, with `dist/index.html` at the
-root and direct `privacy/` and `terms/` entry points.
+root and direct `demo/`, `privacy/`, `terms/`, and designed `404.html` entry
+points.
 
 ## Configuration and deployment
 
@@ -70,14 +72,15 @@ Apps. The host must serve HTTPS so Web Crypto and service workers are available.
 ## Privacy and limitations
 
 Normal workflow data never leaves the browser. The local encryption key lives
-in this origin’s local storage, separate from encrypted PDF bytes in IndexedDB;
-clearing site data removes both. Reviewer names are a handoff record, not
-identity verification or legal approval. Keep normal business records and make
-backups where appropriate. See the in-product `/privacy` and `/terms` pages.
+in this origin’s local storage, separate from encrypted PDF bytes in IndexedDB.
+Clearing site data removes both. Do not treat a reviewer name as identity
+verification or legal approval. Keep normal business records and make backups
+where appropriate. See the in-product `/privacy` and `/terms` pages.
 
 The visual direction and generated-asset provenance are in
-[`.factory/design.md`](.factory/design.md). Release verification and known gaps
-are in [`.factory/handoff.md`](.factory/handoff.md).
+[`.factory/design.md`](.factory/design.md). The demo contract is in
+[`.factory/demo.md`](.factory/demo.md), and release evidence is in
+[`.factory/handoff.md`](.factory/handoff.md).
 
 ## License
 

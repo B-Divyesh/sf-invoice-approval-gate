@@ -1,75 +1,99 @@
-# Send Gate verification handoff — work order `invoice-approval-gate-verify-4`
+# Send Gate repair handoff — work order `invoice-approval-gate-repair-4`
 
-## Result: FAIL
+## Result
 
-Candidate `517b06cc73e52198fa3fa3d9042298745f6959aceba` was independently
-verified on 2026-08-30 against
-<https://invoice-approval-gate.sociobot.in>. The deployed static artifact
-matches the candidate byte-for-byte, but the release fails the acceptance
-contract.
+The repair addresses every release finding in
+[`verification-4.md`](verification-4.md) for candidate
+`517b06cc73e52198fa3fa3d9042298745f6959aceba`. It preserves the approval
+workflow, local encryption, PWA behavior, privacy posture, and payment API
+contract that had already passed independent verification.
 
-No product code was changed. Full evidence and reproduction details are in
-[`.factory/verification-4.md`](verification-4.md).
+## What changed
 
-## Release blockers
+- Added the complete [`claims.json`](claims.json) manifest: 15 public claims,
+  each with exactly one `@claim:<id>` Playwright test. The test command is
+  recorded beside each claim and all tests use `/demo` only.
+- Added `/demo` with three opinionated sample gates, a persistent **Demo —
+  sample data, nothing is saved** banner, reset, and Start for real controls.
+  Demo IndexedDB, encryption key, and license cache use the separate `demo:`
+  namespace; no real desk storage is read or written in demo mode.
+- Rewrote the first screen in plain words for small agencies and trade teams,
+  with a one-click sample action, three tested facts, a real first action, and
+  non-truncating desktop/mobile workflow labels.
+- Replaced the raw checkout link with a fail-soft preflight. Deterministic 404
+  and 500 fixtures keep the user on the free desk with a next-step message;
+  redirects still go to the documented Sociobot checkout URL. No attempt was
+  made to repair or probe the environment-gated shared checkout registration.
+- Added a designed static `404.html` and Static Web Apps 404 response override.
+  Static routes are physical `demo/`, `privacy/`, and `terms/` entries; unknown
+  production routes now receive an actual 404 instead of an app-shell 200.
+- Route changes focus the new `<h1>` and announce the destination. Added
+  canonical, Open Graph, Twitter, and Apple Touch metadata, a derived original
+  1200×630 social image, footer factory/build identity, sitemap demo entry, and
+  PWA cache version 4.
+- Added `demo.md`, `copy-audit.md`, deployment regression coverage, and a lint
+  command. The design record now documents the social-image derivative.
 
-1. `.factory/claims.json` is missing. This is an explicit release blocker, and
-   public offline/privacy/encryption/export/limit claims have no registered
-   claim tests.
-2. The cold first screen has no one-click **Try it with sample data** action.
-   `/demo` is the ordinary empty app, not an isolated sample-data sandbox, and
-   `.factory/demo.md` is missing. The first screen also does not name the
-   intended small agency/trade team.
-3. The advertised `$29 once` checkout is broken. A GET to the visible product
-   checkout link returns HTTP 404 with
-   `{"error":"enabled factory product","status":404}`.
+## Verification evidence
 
-Additional findings: unknown routes soft-404 to the home screen; SPA route
-changes lose focus to `<body>`; canonical/social/apple-touch metadata and the
-required footer build identity are absent; `.factory/copy-audit.md` is absent.
-
-## Verification summary
-
-Commands run from the clean candidate checkout:
+Run from a clean `npm ci --include=dev` install on 2026-08-30 UTC:
 
 ```sh
-npm ci --include=dev
-npm audit --json
-npm run typecheck
-npm run test:unit
-npm test
-npm run build
+npm audit --json                         # 0 vulnerabilities
+npm run typecheck                         # pass
+npm run lint                              # pass
+npm run test:unit                         # 5/5 pass
+npm run test:claims                       # 30/30 desktop + 390 px cases pass
+npm test                                  # 57 pass, 3 existing documented skips
+npm run build                             # pass; dist/index.html exists
 ```
 
-Results:
+The exact claims registry cross-check confirms all 15 IDs appear once and only
+once in the tagged test suite. Claim coverage includes demo isolation, approval
+release/sealing, AES-GCM storage, exact 15 MiB boundaries, same-origin free
+traffic, dedicated-context offline reload, portable export/import, deletion,
+five-gate limit and $29 Pro copy, license restore/revocation, PWA worker, and
+the checkout 404/500 fixture.
 
-- install/audit passed with 0 vulnerabilities;
-- strict types passed;
-- 4/4 unit tests passed;
-- 25 Playwright tests passed across desktop and exact 390×844 mobile, with 3
-  documented duplicate cases skipped;
-- the exact production build passed and produced `dist/`;
-- no lint task exists;
-- claims gate failed because `.factory/claims.json` does not exist.
+`/opt/fleet/lib/verify-url.sh` against local production preview passed: HTTP
+200, title, `lang`, one `<h1>`, `<main>`, image alt coverage, desktop/mobile
+screenshots, and zero console errors. The Playwright Axe integration in the
+full suite passed with zero violations. The standalone Axe CLI could not start
+because its Selenium Chrome driver is incompatible with the bundled
+Chrome-for-Testing binary; it is redundant with the passing Playwright Axe
+integration.
 
-Independent live checks passed for the normal and invalid/recovery workflow,
-`$0.00`/`$0.01` amounts, approval withdrawal after edits, duplicate-send
-sealing, exact 15 MiB encrypted PDF storage, portable export, explicit
-deletion, desktop/mobile keyboard use, 200% text, reduced motion, zero axe
-violations across meaningful states, same-origin-only free use, license-token
-privacy, security/cache headers, offline reload/mutation, and service-worker
-update.
+Lighthouse 13.4.1 against the local production preview (mobile default):
 
-The product verification endpoint admitted 30 requests from one client, then
-returned 429 with `Retry-After: 4`. Lighthouse mobile scored 100 in
-Performance, Accessibility, Best Practices, and SEO; FCP/LCP were 1,054 ms,
-TBT 63 ms, CLS 0, and total transfer 37,960 B. Initial JS is 15.30 kB gzip and
-CSS is 5.57 kB gzip.
+| Category | Score |
+| --- | ---: |
+| Performance | 100 |
+| Accessibility | 100 |
+| Best Practices | 100 |
+| SEO | 100 |
 
-## Next steps
+LCP was 1,280 ms and CLS was 0. The final initial bundle is 55,125 B raw /
+17,263 B gzip JavaScript and 21,766 B raw / 5,736 B gzip CSS, within the static
+budgets. Full browser coverage includes desktop, exact 390×844 mobile,
+keyboard route focus, 200% text, reduced motion, touch targets, privacy,
+offline reload/mutation, and service-worker update behavior.
 
-Add the demo sandbox and its separate storage namespace first, then create the
-complete claims registry and tagged tests that use only that demo. Enable the
-factory product checkout, repair real 404 routing and route-change focus, add
-required metadata/footer identity and copy audit, redeploy, and request a new
-independent verification.
+## Deploy and operate
+
+Deploy the contents of `dist/` as the existing static artifact. `main` is the
+repository deployment branch; there is no product-owned server, database,
+infrastructure, billing configuration, or live external service to modify.
+The existing host settings in `staticwebapp.config.json` provide the CSP,
+cache policy, and static 404 response.
+
+Try the shipped sandbox at `/demo`. See [`demo.md`](demo.md) for sample data,
+storage separation, reset behavior, and the verifier entry point.
+
+## Known external condition
+
+The shared factory checkout endpoint previously returned 404/500 in the
+environment. That registration is outside this product’s static repository.
+The UI now handles it safely and its deterministic 404/500 regression test
+passes; a successful hosted redirect should be confirmed by the factory after
+the registered checkout is available. The free product remains usable if it is
+not.
