@@ -86,6 +86,9 @@ infrastructure, billing configuration, or live external service to modify.
 The existing host settings in `staticwebapp.config.json` provide the CSP,
 cache policy, and static 404 response.
 
+Repair commit `b4de5cd` was pushed to `origin/main` on 2026-08-30 UTC for the
+work order’s static deployment path.
+
 Try the shipped sandbox at `/demo`. See [`demo.md`](demo.md) for sample data,
 storage separation, reset behavior, and the verifier entry point.
 
