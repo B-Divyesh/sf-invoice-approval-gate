@@ -31,6 +31,8 @@ function requestValue<T>(request: IDBRequest<T>): Promise<T> {
 }
 
 function transactionDone(transaction: IDBTransaction): Promise<void> {
+  // Call this before issuing a request so the public storage operation always
+  // resolves at the IndexedDB commit boundary, never at request success.
   return new Promise((resolve, reject) => {
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error ?? new Error('The local database could not be updated.'));
@@ -58,7 +60,9 @@ export async function getGates(): Promise<Gate[]> {
   const db = await openDatabase();
   try {
     const transaction = db.transaction(GATE_STORE, 'readonly');
+    const complete = transactionDone(transaction);
     const records = await requestValue(transaction.objectStore(GATE_STORE).getAll() as IDBRequest<Gate[]>);
+    await complete;
     return records.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   } finally {
     db.close();
@@ -69,8 +73,9 @@ export async function putGate(gate: Gate): Promise<void> {
   const db = await openDatabase();
   try {
     const transaction = db.transaction(GATE_STORE, 'readwrite');
+    const complete = transactionDone(transaction);
     transaction.objectStore(GATE_STORE).put(gate);
-    await transactionDone(transaction);
+    await complete;
   } finally {
     db.close();
   }
@@ -80,8 +85,9 @@ export async function deleteGate(id: string): Promise<void> {
   const db = await openDatabase();
   try {
     const transaction = db.transaction(GATE_STORE, 'readwrite');
+    const complete = transactionDone(transaction);
     transaction.objectStore(GATE_STORE).delete(id);
-    await transactionDone(transaction);
+    await complete;
   } finally {
     db.close();
   }
@@ -91,10 +97,11 @@ export async function replaceAllGates(gates: Gate[]): Promise<void> {
   const db = await openDatabase();
   try {
     const transaction = db.transaction(GATE_STORE, 'readwrite');
+    const complete = transactionDone(transaction);
     const store = transaction.objectStore(GATE_STORE);
     store.clear();
     for (const gate of gates) store.put(gate);
-    await transactionDone(transaction);
+    await complete;
   } finally {
     db.close();
   }

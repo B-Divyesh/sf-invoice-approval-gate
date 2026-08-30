@@ -390,7 +390,7 @@ test('route metadata, build identity, and onboarding labels are complete without
   await expect(page).toHaveTitle('Send Gate — Approve quotes before sending');
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://invoice-approval-gate.sociobot.in/');
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /send-gate-social-1200x630\.jpg$/);
-  await expect(page.getByText('Built by Param Factory · v1.0.1 · build repair-4')).toBeVisible();
+  await expect(page.getByText('Built by Param Factory · v1.0.2 · build repair-5')).toBeVisible();
   const labelsFit = await page.locator('.how-strip small').evaluateAll((labels) => labels.every((label) => label.scrollWidth <= label.clientWidth));
   expect(labelsFit).toBe(true);
   if (testInfo.project.name === 'mobile') {

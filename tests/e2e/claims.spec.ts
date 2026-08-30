@@ -11,6 +11,43 @@ async function fillLinkGate(page: import('@playwright/test').Page, title: string
   await page.getByLabel('Reviewer name').fill('Morgan');
 }
 
+async function readCommittedDemoGate(page: import('@playwright/test').Page, title: string): Promise<{
+  cipher: boolean;
+  encryptedSize: number;
+  plainTextPresent: boolean;
+} | null> {
+  return page.evaluate(async (gateTitle) => {
+    const request = indexedDB.open('demo:send-gate-local');
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      const transaction = db.transaction('gates', 'readonly');
+      const complete = new Promise<void>((resolve, reject) => {
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error);
+      });
+      const query = transaction.objectStore('gates').getAll();
+      const gates = await new Promise<any[]>((resolve, reject) => {
+        query.onsuccess = () => resolve(query.result);
+        query.onerror = () => reject(query.error);
+      });
+      await complete;
+      const gate = gates.find((item) => item.title === gateTitle);
+      if (!gate?.document) return null;
+      return {
+        cipher: gate.document.cipher instanceof ArrayBuffer,
+        encryptedSize: gate.document.cipher.byteLength,
+        plainTextPresent: JSON.stringify(gate).includes('%PDF-1.7'),
+      };
+    } finally {
+      db.close();
+    }
+  }, title);
+}
+
 test('@claim:checkout-fail-soft handles the documented checkout 404 and a 500 without leaving the free desk', async ({ page }) => {
   let attempt = 0;
   await page.route('https://api.sociobot.in/api/v1/products/invoice-approval-gate/checkout', async (route) => {
@@ -65,8 +102,9 @@ test('@claim:sealed-handoff removes the second-send control after a handoff is r
 });
 
 test('@claim:local-encryption encrypts a demo PDF before IndexedDB storage', async ({ page }) => {
+  const title = 'Demo encrypted PDF';
   await page.goto('/demo?new=1');
-  await page.getByLabel('Gate name').fill('Demo encrypted PDF');
+  await page.getByLabel('Gate name').fill(title);
   await page.getByLabel('PDF file').setInputFiles({
     name: 'demo.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.7\n% demo PDF\n%%EOF'),
   });
@@ -75,21 +113,14 @@ test('@claim:local-encryption encrypts a demo PDF before IndexedDB storage', asy
   await page.getByLabel('Amount').fill('20');
   await page.getByLabel('Reviewer name').fill('Morgan');
   await page.getByRole('button', { name: /Create draft gate/ }).click();
-  const stored = await page.evaluate(async () => {
-    const request = indexedDB.open('demo:send-gate-local');
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-    const query = db.transaction('gates', 'readonly').objectStore('gates').getAll();
-    const gates = await new Promise<any[]>((resolve, reject) => {
-      query.onsuccess = () => resolve(query.result);
-      query.onerror = () => reject(query.error);
-    });
-    db.close();
-    const gate = gates.find((item) => item.title === 'Demo encrypted PDF');
-    return { cipher: gate.document.cipher instanceof ArrayBuffer, encryptedSize: gate.document.cipher.byteLength, plainTextPresent: JSON.stringify(gate).includes('%PDF-1.7') };
-  });
+  await expect(page.getByRole('heading', { name: title })).toBeVisible();
+  await expect.poll(() => readCommittedDemoGate(page, title), {
+    message: 'The rendered encrypted PDF gate should be committed before another IndexedDB connection reads it.',
+    timeout: 5_000,
+  }).not.toBeNull();
+  const stored = await readCommittedDemoGate(page, title);
+  expect(stored).not.toBeNull();
+  if (!stored) throw new Error('The encrypted PDF gate was not committed.');
   expect(stored.cipher).toBe(true);
   expect(stored.encryptedSize).toBeGreaterThan(Buffer.byteLength('%PDF-1.7\n% demo PDF\n%%EOF'));
   expect(stored.plainTextPresent).toBe(false);
