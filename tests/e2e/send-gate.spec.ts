@@ -47,6 +47,30 @@ test('empty desk is accessible and creates an approval through send handoff', as
   await expect(page.getByText('no second send button', { exact: false })).toBeVisible();
 });
 
+test('settings Pro ribbon and sent-state explanation meet the AA contrast gate', async ({ page }) => {
+  await page.goto('/?view=settings');
+  await expect(page.locator('.pro-ribbon')).toBeVisible();
+  const ribbonColors = await page.locator('.pro-ribbon').evaluate((element) => {
+    const styles = getComputedStyle(element);
+    return { background: styles.backgroundColor, foreground: styles.color };
+  });
+  expect(ribbonColors).toEqual({ background: 'rgb(169, 54, 37)', foreground: 'rgb(255, 255, 255)' });
+  expect((await new AxeBuilder({ page }).withRules(['color-contrast']).analyze()).violations).toEqual([]);
+
+  await page.goto('/?new=1');
+  await fillLinkGate(page, 'Contrast checked handoff');
+  await page.getByRole('button', { name: /Create draft gate/ }).click();
+  await page.getByRole('button', { name: /Submit for approval/ }).click();
+  await page.getByLabel('Decision comment').fill('Recipient, amount, and source checked.');
+  await page.getByRole('button', { name: 'Approve to send' }).click();
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: /Mark handoff as sent/ }).click();
+  await expect(page.getByRole('heading', { name: /Marked sent/ })).toBeVisible();
+  const sentColor = await page.locator('.sent-block > p:not(.action-kicker)').evaluate((element) => getComputedStyle(element).color);
+  expect(sentColor).toBe('rgb(13, 53, 42)');
+  expect((await new AxeBuilder({ page }).withRules(['color-contrast']).analyze()).violations).toEqual([]);
+});
+
 test('PDFs are encrypted in storage and can be released after approval', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'mobile', 'Covered once in Chromium; mobile exercises the link workflow.');
   await page.goto('/');

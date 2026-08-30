@@ -24,8 +24,9 @@ document desk, and the paper metaphor is the navigation aid.
 | `forest` | `#174C3C` | primary controls and approved state |
 | `forest-deep` | `#0D352A` | pressed controls and footer |
 | `coral` | `#D9573F` | attention tabs, reject/destructive accent |
+| `coral-deep` | `#A93625` | small white-on-coral labels, including the Pro ribbon (≥ 4.5:1) |
 | `amber` | `#B66A08` | awaiting-review state; paired with label/icon |
-| `sage` | `#C8D4B4` | approved paper layers |
+| `sage` | `#C8D4B4` | approved paper layers; normal text on it uses forest-deep (≥ 4.5:1) |
 | `rule` | `#C6BEA8` | dividers and inactive outlines |
 
 Coral is never the only indicator of danger, and status always includes a word

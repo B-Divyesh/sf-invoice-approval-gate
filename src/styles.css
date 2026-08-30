@@ -135,6 +135,7 @@ h3 { font-size: 22px; line-height: 1.2; }
 .review-block { border-color: var(--amber); background: #fff0ce; }
 .release-block { border-color: var(--forest); background: #e2ead5; }
 .sent-block { border-color: var(--forest-deep); background: var(--sage); }
+.sent-block > p:not(.action-kicker) { color: var(--forest-deep); }
 .document-actions, .decision-actions, .release-actions, .button-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 18px 0; }
 .review-block label { display: block; margin-top: 20px; font-weight: 850; }
 .review-block textarea { width: 100%; margin-top: 6px; resize: vertical; }
@@ -192,7 +193,7 @@ input[type='file'] { width: 100%; height: auto; }
 .settings-section p { max-width: 70ch; color: var(--ink-soft); }
 .settings-icon { width: 48px; height: 48px; display: grid; place-items: center; background: var(--forest); color: #fff; font: 700 27px/1 var(--serif); }
 .pro-sheet { border-top: 9px solid var(--forest); box-shadow: 8px 8px 0 var(--sage); }
-.pro-ribbon { position: absolute; right: -34px; top: 18px; width: 140px; padding: 7px; transform: rotate(40deg); background: var(--coral); color: #fff; text-align: center; text-transform: uppercase; font-size: 11px; letter-spacing: .1em; font-weight: 900; }
+.pro-ribbon { position: absolute; right: -34px; top: 18px; width: 140px; padding: 7px; transform: rotate(40deg); background: var(--coral-deep); color: #fff; text-align: center; text-transform: uppercase; font-size: 11px; letter-spacing: .1em; font-weight: 900; }
 .price { margin: 21px 0; color: var(--ink) !important; font: 700 34px/1 var(--serif); }
 .price small { display: block; margin-top: 7px; font: 500 14px/1.4 var(--sans); color: var(--ink-soft); }
 .license-good { max-width: 460px; padding: 12px 16px; background: var(--sage); color: var(--forest-deep); font-weight: 850; }
