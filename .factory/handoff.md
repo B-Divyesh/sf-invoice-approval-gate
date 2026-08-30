@@ -56,7 +56,10 @@ boundary and the 20-case stress run passed.
 Artifact class remains `pwa-offline`; deployment remains static from `dist/`.
 The service-worker cache name is versioned to `send-gate-v5` so installed
 clients can receive this repair. The repair is pushed to `origin/main` for the
-factory's static deployment flow.
+factory's static deployment flow. `origin/main` resolved to the pushed commit,
+but four public identity checks over several minutes still returned the prior
+deployment. Static-host propagation is therefore pending with the factory; no
+hosting, DNS, billing, or other infrastructure was changed from this repo.
 
 ## Known environment-owned gap
 
