@@ -108,7 +108,7 @@ h3 { font-size: 22px; line-height: 1.2; }
 .gate-state { grid-column: 2; color: var(--ink-soft); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
 .document-sheet { position: relative; background: var(--paper-raised); border: 1px solid var(--rule); padding: clamp(28px, 5vw, 58px); box-shadow: 12px 12px 0 var(--paper-deep), 13px 13px 0 var(--rule); min-width: 0; animation: sheet-in 260ms ease both; }
 .document-sheet::before { content: ''; position: absolute; top: -7px; left: 15%; width: 70%; height: 9px; background: #e8dfc7; border: 1px solid var(--rule); z-index: -1; }
-@keyframes sheet-in { from { opacity: .4; transform: translateY(6px); } }
+@keyframes sheet-in { from { transform: translateY(6px); } }
 .sheet-tab { position: absolute; right: -1px; top: 26px; min-height: 39px; padding: 9px 16px; color: #fff; background: var(--ink); text-transform: uppercase; letter-spacing: .08em; font-size: 12px; font-weight: 900; }
 .document-head { display: flex; justify-content: space-between; gap: 24px; padding: 18px 0 28px; border-bottom: 2px solid var(--ink); }
 .document-head h2 { margin: 0; font-size: clamp(30px, 4vw, 45px); max-width: 15ch; overflow-wrap: anywhere; }
