@@ -11,6 +11,25 @@ async function fillLinkGate(page: import('@playwright/test').Page, title: string
   await page.getByLabel('Reviewer name').fill('Morgan');
 }
 
+async function gateCount(page: import('@playwright/test').Page, databaseName: string): Promise<number> {
+  return page.evaluate(async (name) => {
+    const request = indexedDB.open(name);
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      const query = db.transaction('gates', 'readonly').objectStore('gates').count();
+      return await new Promise<number>((resolve, reject) => {
+        query.onsuccess = () => resolve(query.result);
+        query.onerror = () => reject(query.error);
+      });
+    } finally {
+      db.close();
+    }
+  }, databaseName);
+}
+
 async function readCommittedDemoGate(page: import('@playwright/test').Page, title: string): Promise<{
   cipher: boolean;
   encryptedSize: number;
@@ -69,18 +88,24 @@ test('@claim:checkout-fail-soft handles the documented checkout 404 and a 500 wi
   expect(attempt).toBe(2);
 });
 
-test('@claim:demo-sandbox loads three isolated sample gates and can reset or leave the demo', async ({ page }) => {
-  await page.goto('/demo');
+test('@claim:demo-sandbox loads three isolated sample gates from the landing action and can reset or leave the demo', async ({ page }) => {
+  await page.goto('/');
+  const realGateCountBefore = await gateCount(page, 'send-gate-local');
+  expect(realGateCountBefore).toBe(0);
+  await page.evaluate(() => { (window as Window & { demoSentinel?: boolean }).demoSentinel = true; });
+  await page.getByRole('link', { name: 'Try it with sample data' }).click();
+  await expect(page).toHaveURL(/\/demo$/);
   await expect(page.getByLabel('Demo controls')).toContainText('Demo — sample data, nothing is saved.');
   await expect(page.getByRole('heading', { name: 'Harbour House — kitchen quote' })).toBeVisible();
+  expect(await page.evaluate(() => (window as Window & { demoSentinel?: boolean }).demoSentinel)).toBe(true);
   const names = await page.evaluate(async () => (await indexedDB.databases()).map((entry) => entry.name));
   expect(names).toContain('demo:send-gate-local');
-  expect(names).not.toContain('send-gate-local');
   await page.getByRole('button', { name: 'Reset demo' }).click();
   await expect(page.getByText('Demo reset to three sample gates.')).toBeVisible();
   await page.getByRole('button', { name: 'Start for real' }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('heading', { name: 'Approve quotes and invoices before they go out.' })).toBeVisible();
+  expect(await gateCount(page, 'send-gate-local')).toBe(realGateCountBefore);
 });
 
 test('@claim:approval-handoff releases the client email draft only after a recorded approval', async ({ page }) => {

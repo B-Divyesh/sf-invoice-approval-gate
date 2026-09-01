@@ -17,7 +17,7 @@ describe('static deployment contract', () => {
   test('keeps the PWA and designed 404 on the current repair identity', async () => {
     const manifest = JSON.parse(await readFile('public/manifest.webmanifest', 'utf8')) as { start_url: string };
     const page = await readFile('public/404.html', 'utf8');
-    expect(manifest.start_url).toBe('/?source=pwa&v=5');
-    expect(page).toContain('Built by Param Factory · v1.0.2 · build repair-5');
+    expect(manifest.start_url).toBe('/?source=pwa&v=6');
+    expect(page).toContain('Built by Param Factory · v1.0.3 · build repair-6');
   });
 });

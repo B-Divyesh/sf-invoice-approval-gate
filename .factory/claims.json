@@ -11,7 +11,7 @@
     "claim": "Try three sample gates without changing your real desk.",
     "where": "landing primary action, /demo banner, README",
     "test": "npm run test:claims -- --grep @claim:demo-sandbox",
-    "sandbox": "fresh /demo browser context; assert demo: IndexedDB namespace, three samples, reset, and Start for real"
+    "sandbox": "fresh / browser context; click the landing action, then assert the demo: IndexedDB namespace, three samples, reset, and Start for real"
   },
   {
     "id": "approval-handoff",

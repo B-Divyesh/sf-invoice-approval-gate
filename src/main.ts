@@ -33,7 +33,9 @@ type AppView = 'desk' | 'new' | 'settings';
 const FREE_ACTIVE_LIMIT = 5;
 class SendGateApp {
   private readonly root: HTMLElement;
-  private readonly demo = isDemoRoute();
+  // Demo mode controls both the rendered desk and the storage namespace. It
+  // must change together when a visitor enters /demo from the landing page.
+  private demo = isDemoRoute();
   private gates: Gate[] = [];
   private selectedId: string | null = null;
   private view: AppView = 'desk';
@@ -50,7 +52,7 @@ class SendGateApp {
     this.root.addEventListener('input', (event) => this.onInput(event));
     this.root.addEventListener('submit', (event) => void this.onSubmit(event));
     document.querySelector<HTMLAnchorElement>('.skip-link')?.addEventListener('click', (event) => this.skipToMain(event));
-    window.addEventListener('popstate', () => this.routeFromUrl());
+    window.addEventListener('popstate', () => void this.routeFromBrowser());
     window.addEventListener('online', () => this.render());
     window.addEventListener('offline', () => this.render());
   }
@@ -59,12 +61,7 @@ class SendGateApp {
     const returned = storeReturnedLicense();
     this.routeFromUrl(false);
     try {
-      this.gates = await getGates();
-      if (this.demo && !this.gates.length) {
-        await replaceAllGates(sampleGates());
-        this.gates = await getGates();
-      }
-      this.selectedId = this.selectedId ?? this.gates[0]?.id ?? null;
+      await this.loadGates();
     } catch (error) {
       this.storageError = error instanceof Error ? error.message : 'Private local storage could not be opened.';
     }
@@ -99,9 +96,39 @@ class SendGateApp {
     }
   }
 
-  private go(url: string): void {
+  private deskRouteDemo(): boolean | null {
+    const path = location.pathname.replace(/\/$/, '') || '/';
+    if (path === '/demo') return true;
+    if (path === '/') return new URLSearchParams(location.search).get('demo') === '1';
+    // Legal and error pages do not own a desk. Keep the existing namespace so
+    // a demo visitor who returns from them remains in the isolated sandbox.
+    return null;
+  }
+
+  private async switchNamespace(demo: boolean): Promise<void> {
+    this.demo = demo;
+    configureStorageNamespace(demo ? 'demo' : undefined);
+    configureBillingNamespace(demo ? 'demo' : undefined);
+    this.selectedId = null;
+    this.storageError = '';
+    try {
+      await this.loadGates();
+    } catch (error) {
+      this.storageError = error instanceof Error ? error.message : 'Private local storage could not be opened.';
+    }
+  }
+
+  private async routeFromBrowser(): Promise<void> {
+    const requestedDemo = this.deskRouteDemo();
+    if (requestedDemo !== null && requestedDemo !== this.demo) await this.switchNamespace(requestedDemo);
+    this.routeFromUrl();
+  }
+
+  private async go(url: string): Promise<void> {
     const destination = this.demo && (url === '/' || url.startsWith('/?')) ? `/demo${url.slice(1)}` : url;
     history.pushState({}, '', destination);
+    const requestedDemo = this.deskRouteDemo();
+    if (requestedDemo !== null && requestedDemo !== this.demo) await this.switchNamespace(requestedDemo);
     this.routeFromUrl();
     window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }
@@ -181,7 +208,7 @@ class SendGateApp {
       <p><span class="mini-mark" aria-hidden="true">▰</span> Local approval records stay in this browser.</p>
       <nav aria-label="Legal"><a href="/privacy" data-route="/privacy">Privacy</a><a href="/terms" data-route="/terms">Terms</a></nav>
       <p class="art-note">Original AI-assisted paper artwork, made for Send Gate.</p>
-      <p class="build-note">Built by Param Factory · v1.0.2 · build repair-5</p>
+      <p class="build-note">Built by Param Factory · v1.0.3 · build repair-6</p>
     </footer>`;
   }
 
@@ -817,6 +844,15 @@ class SendGateApp {
   private async reload(selectedId?: string): Promise<void> {
     this.gates = await getGates();
     this.selectedId = selectedId ?? this.selectedId ?? this.gates[0]?.id ?? null;
+  }
+
+  private async loadGates(): Promise<void> {
+    this.gates = await getGates();
+    if (this.demo && !this.gates.length) {
+      await replaceAllGates(sampleGates());
+      this.gates = await getGates();
+    }
+    this.selectedId = this.selectedId ?? this.gates[0]?.id ?? null;
   }
 
   private activeCount(): number {

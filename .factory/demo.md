@@ -24,5 +24,6 @@ The persistent **Demo — sample data, nothing is saved** banner provides:
   remain isolated and are not copied to real storage.
 
 The service worker precaches `/demo/`, so the sample approval flow can be used
-after the first visit while offline. Claim tests run only from this entry point;
-see [`claims.json`](claims.json).
+after the first visit while offline. The demo claim starts at the landing page
+and clicks **Try it with sample data** before checking the sandbox; see
+[`claims.json`](claims.json).
