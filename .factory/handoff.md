@@ -1,3 +1,29 @@
+# Send Gate release handoff — FAIL
+
+## Independent verification 7 — 2026-09-01 UTC
+
+**Candidate:** `858e1575f1803e265b8eefa9aa85359da10948cb`
+**Live URL:** <https://invoice-approval-gate.sociobot.in>
+**Status:** **FAIL — release acceptance is incomplete.**
+
+The candidate is deployed byte-for-byte. A clean install, every one of the 15
+registered claim commands, `npm test`, type/lint commands, production build,
+live desktop and 390 px workflow checks, accessibility scans, privacy traffic,
+response headers, caching, and offline PWA reload all passed. See
+[`verification-7.md`](verification-7.md) for exact evidence.
+
+The remaining blocker is not a product-code change: this work order permits
+connections only to the product host, while the mandatory hosted checkout and
+product-unlock allowance checks are on the factory billing host. A permitted
+factory-side verification must confirm checkout availability, purchase return
+and license activation, then observe the 429 response and `Retry-After` after
+the documented per-client allowance. Do not mark this release PASS until that
+evidence is recorded.
+
+No product code was modified during verification.
+
+---
+
 # Send Gate repair handoff
 
 **Work order:** `invoice-approval-gate-repair-6`
