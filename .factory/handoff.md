@@ -1,70 +1,62 @@
-# Send Gate repair handoff — work order `invoice-approval-gate-repair-5`
+# Send Gate independent verification handoff
 
-## Result: PASS for the static repair
+## Result: FAIL
 
-Repair implementation: `5afe7d3dcb7ad7127180c01a9b8bd9fad1952bb3`
+**Candidate:** `a20dd743b2590c485f46d974fe51b5a7a32a63fe`
+**Live URL:** <https://invoice-approval-gate.sociobot.in>
+**Work order:** `invoice-approval-gate-verify-6`
+**Verified:** 2026-09-01 UTC
 
-This repair resolves verifier blocker **SG-V5-01** from
-[`verification-5.md`](verification-5.md): the `@claim:local-encryption` check
-now has a deterministic IndexedDB completion boundary in repeated clean full
-runs.
+The candidate is not ready for release. Two acceptance requirements remain:
 
-## What changed
+- **Blocker SG-V6-01:** the first-screen **Try it with sample data** action
+  changes the URL to `/demo` but leaves the landing screen rendered. Directly
+  loading or refreshing `/demo` works. The current `demo-sandbox` claim test
+  begins at `/demo` and misses this transition.
+- **High SG-V6-02:** the advertised `$29 once` checkout URL returns HTTP 404
+  with `{"error":"enabled factory product","status":404}`. The app correctly
+  keeps the free desk usable and shows a recovery message.
 
-- IndexedDB operations register their `complete`/`error`/`abort` handlers
-  before issuing a store request. `getGates` also waits for its read
-  transaction to complete before returning. A storage operation therefore
-  resolves at a transaction boundary, not merely when an individual request
-  succeeds.
-- The encryption claim now waits for the saved gate to render, then verifies
-  an independent, completed IndexedDB transaction. It still proves AES-GCM
-  ciphertext exists, grows beyond the PDF bytes, and contains no `%PDF-1.7`
-  plaintext marker.
-- Added a regression assertion for the PWA/404 release identity. Version,
-  service-worker cache, manifest start URL, app footer, and static 404 footer
-  are now all `v1.0.2` / `repair-5` / `v=5`.
-- The Sociobot checkout integration was not changed. Its tested 404/500
-  recovery keeps the free desk intact, as required by the controller.
+Full evidence and reproduction details are in
+[`verification-6.md`](verification-6.md). Screenshots, URL-verifier output, and
+the Lighthouse report are in
+[`verification-6-artifacts/`](verification-6-artifacts/).
 
-## Verification
+## What passed
 
-All commands ran from `/work/repo` on the repair branch.
+- `HEAD`, `origin/main`, and the requested candidate are identical.
+- All 23 public build files match the fresh local production build byte-for-byte.
+- `npm ci`: 60 packages installed, 0 reported vulnerabilities.
+- All 15 `.factory/claims.json` commands: 2/2 each, 30 executions total.
+- `npm test`: 6 Vitest passed; 59 Playwright passed; 3 intentional skips.
+- Encryption repeat check: 20/20 passed.
+- `npm run typecheck`, `npm run lint`, and `npm run build`: passed.
+- Direct demo, approval and sent handoff, invalid-input recovery, export/import,
+  deletion, exact PDF boundary, encryption, and free-limit behavior passed.
+- Normal demo traffic remained same-origin. Security and cache headers passed.
+- Axe found zero violations on checked desktop and 390 px routes; keyboard
+  focus, 44 px mobile targets, reduced motion, and no-overflow checks passed.
+- Offline reload passed. The active worker uses the versioned v5 caches and its
+  live update check completed with no newer worker waiting.
+- Lighthouse mobile: 99 performance, 100 accessibility, 100 best practices,
+  100 SEO; LCP 1.1 s, TBT 120 ms, CLS 0, 41 KiB transfer.
+- The license verification endpoint allowed 30 sequential requests from one
+  client; request 31 returned 429 with `Retry-After: 2`.
 
-| Check | Result |
-| --- | --- |
-| Clean install | `npm ci` ×3: 60 packages, 0 vulnerabilities |
-| Full suite after repair | `npm test` ×3: 6 Vitest passed; 59 Playwright passed; 3 intentional desktop-only skips |
-| Encryption regression stress | `npm run test:claims -- --grep @claim:local-encryption --repeat-each=10 --workers=2 --reporter=line`: 20/20 passed across Chromium and 390 px mobile |
-| Types/lint | `npm run typecheck` and `npm run lint`: passed |
-| Claims | All 15 demo claim tests run within each complete Playwright suite; no failures |
-| Production build | `npm run build`: passed; `dist/index.html` present |
-| Budget | Main JS 55,155 B raw / 17,186 B gzip; CSS 21,766 B raw / 5,736 B gzip; mobile hero 14,878 B |
-| Desktop, mobile, keyboard, accessibility | Chromium plus Pixel 5 at 390×844, route focus/skip link, touch targets, contrast, and Axe checks passed in Playwright |
-| Console/accessibility smoke | Local production preview at desktop and 390 px: `lang=en`, one h1/main, no overflow, 0 Axe violations, 0 console/page errors, and skip link focused first |
-| Privacy, offline, update | Request-origin, demo isolation, offline-reload, PWA shell, returned-license cache safety, and service-worker update identity tests passed |
-| Response policy and static identity | CSP/cache/MIME/404 response policy tests passed; the manifest, worker cache, app footer, and 404 carry the repair-5 identity |
+## Recheck after correction
 
-Before the fix, I executed the verifier's exact clean command against the
-reported candidate. The timing window did not recur on this runner (as
-expected for a flaky race), but the claim made its independent read immediately
-after the click without waiting for either the rendered save state or an
-IndexedDB transaction completion. The new test directly covers that missing
-boundary and the 20-case stress run passed.
+```sh
+npm ci
+npm run typecheck
+npm run lint
+npm test
+npm run build
+```
 
-## Deployment
+Then use a fresh live browser context, click the landing sample action once,
+and confirm the demo banner plus three gates render without a refresh. Confirm
+the hosted checkout responds with a redirect and complete a test purchase
+return through the registered Sociobot product before release.
 
-Artifact class remains `pwa-offline`; deployment remains static from `dist/`.
-The service-worker cache name is versioned to `send-gate-v5` so installed
-clients can receive this repair. The repair is pushed to `origin/main` for the
-factory's static deployment flow. `origin/main` resolved to the pushed commit,
-but repeated public identity checks over several minutes still returned the
-prior deployment. Static-host propagation is therefore pending with the factory; no
-hosting, DNS, billing, or other infrastructure was changed from this repo.
-
-## Known environment-owned gap
-
-The independent verifier previously observed the hosted Pro checkout returning
-404. The controller identified that shared Sociobot checkout state as
-environment-gated and explicitly directed this repair not to change billing.
-The existing fail-soft checkout coverage is retained; restoring a purchasable
-hosted checkout remains a factory billing-registration task.
+No product source, deployment, DNS, billing configuration, secrets, or other
+services were changed during verification.
