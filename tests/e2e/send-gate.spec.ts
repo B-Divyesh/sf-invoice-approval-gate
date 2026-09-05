@@ -335,6 +335,29 @@ test('hero keeps its intrinsic ratio and skip link moves focus to a full-size ta
   }
 });
 
+test('populated and supporting routes keep full-size touch targets and reflow at larger text', async ({ page }, testInfo) => {
+  for (const route of ['/demo', '/demo?view=settings', '/privacy/', '/terms/', '/offline.html']) {
+    await page.goto(route);
+    const undersized = await page.locator('a:visible, button:visible, input:visible, select:visible, textarea:visible, summary:visible').evaluateAll((elements) => elements.filter((element) => {
+      if (element.closest('.file-button')) return false;
+      const box = element.getBoundingClientRect();
+      return box.width < 44 || box.height < 44;
+    }).map((element) => ({
+      name: element.textContent?.trim(),
+      tag: element.tagName,
+      width: element.getBoundingClientRect().width,
+      height: element.getBoundingClientRect().height,
+    })));
+    expect(undersized).toEqual([]);
+  }
+  if (testInfo.project.name === 'mobile') {
+    await page.goto('/demo');
+    await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await expect(page.getByRole('button', { name: /Harbour House — kitchen quote/ })).toBeVisible();
+  }
+});
+
 test('invalid returned license resolves checking feedback and restores purchase controls', async ({ page }) => {
   await page.route('https://api.sociobot.in/api/v1/products/invoice-approval-gate/verify?*', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ valid: false, reason: 'invalid' }) });
@@ -408,7 +431,7 @@ test('route metadata, build identity, and onboarding labels are complete without
   await expect(page).toHaveTitle('Send Gate — Approve quotes before sending');
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://invoice-approval-gate.sociobot.in/');
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /send-gate-social-1200x630\.jpg$/);
-  await expect(page.getByText('Built by Param Factory · v1.0.4 · build repair-7')).toBeVisible();
+  await expect(page.getByText('Built by Param Factory · v1.0.5 · build repair-7')).toBeVisible();
   const labelsFit = await page.locator('.how-strip small').evaluateAll((labels) => labels.every((label) => label.scrollWidth <= label.clientWidth));
   expect(labelsFit).toBe(true);
   if (testInfo.project.name === 'mobile') {

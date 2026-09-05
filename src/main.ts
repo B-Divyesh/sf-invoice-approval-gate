@@ -217,7 +217,7 @@ class SendGateApp {
       <p><span class="mini-mark" aria-hidden="true">▰</span> Local approval records stay in this browser.</p>
       <nav aria-label="Legal"><a href="/privacy" data-route="/privacy">Privacy</a><a href="/terms" data-route="/terms">Terms</a></nav>
       <p class="art-note">Original AI-assisted paper artwork, made for Send Gate.</p>
-      <p class="build-note">Built by Param Factory · v1.0.4 · build repair-7</p>
+      <p class="build-note">Built by Param Factory · v1.0.5 · build repair-7</p>
     </footer>`;
   }
 
