@@ -132,6 +132,23 @@ test('installed app shell and saved gate work offline', async ({ page, context }
   await expect(page.getByRole('heading', { name: 'Review for Riley' })).toBeVisible();
 });
 
+test('standalone offline fallback remains styled, accessible, and available without a connection', async ({ page, context }) => {
+  const errors: string[] = [];
+  page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+  await page.goto('/demo');
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.reload();
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+  await context.setOffline(true);
+  await page.goto('/offline.html');
+  await expect(page).toHaveTitle('Offline — Send Gate');
+  await expect(page.getByRole('heading', { name: 'Send Gate is offline.' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Return to approval gates' })).toBeVisible();
+  expect(await page.locator('main').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(255, 253, 246)');
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
 test('privacy and terms render as direct routes with one h1', async ({ page }) => {
   for (const route of ['/privacy/', '/terms/']) {
     await page.goto(route);
@@ -203,7 +220,7 @@ test('invalid audit timestamp rejects backup atomically and preserves the desk',
     name: 'invalid-audit.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)),
   });
   await expect(page.getByText('The backup contains an invalid approval-history event.')).toBeVisible();
-  await page.getByRole('link', { name: 'Approval desk' }).click();
+  await page.getByRole('link', { name: 'Approval gates' }).click();
   await expect(page.getByRole('heading', { name: 'Existing local gate' })).toBeVisible();
   await expect(page.getByText('Invalid imported gate')).toHaveCount(0);
   expect(pageErrors).toEqual([]);
@@ -230,7 +247,7 @@ test('valid portable PDF backup restores readable bytes and is re-encrypted loca
     name: 'valid-pdf.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)),
   });
   await expect(page.getByText('1 gate restored and documents re-encrypted on this device.')).toBeVisible();
-  await page.getByRole('link', { name: 'Approval desk' }).click();
+  await page.getByRole('link', { name: 'Approval gates' }).click();
   await expect(page.getByRole('heading', { name: 'Restored PDF' })).toBeVisible();
   const encrypted = await page.evaluate(async () => {
     const request = indexedDB.open('send-gate-local');
@@ -325,9 +342,9 @@ test('invalid returned license resolves checking feedback and restores purchase 
   await page.goto('/?view=settings&license=qa-verification-invalid-token');
   await expect(page).not.toHaveURL(/license=/);
   await expect(page.getByText('That license is not active for Send Gate. Free features and purchase options remain available.')).toBeVisible();
-  await expect(page.getByRole('button', { name: /Buy Pro securely/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Buy Send Gate Pro/ })).toBeVisible();
   await expect(page.getByText('Have a license? Restore purchase')).toBeVisible();
-  await expect(page.getByText(/Checking your unlock/)).toHaveCount(0);
+  await expect(page.getByText(/Checking it now/)).toHaveCount(0);
 });
 
 test('workflow-inconsistent backup cannot release a handoff or replace existing gates', async ({ page }) => {
@@ -351,7 +368,7 @@ test('workflow-inconsistent backup cannot release a handoff or replace existing 
     name: 'forged-approval.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)),
   });
   await expect(page.getByText('An approved gate in the backup is missing a reviewed approval record.')).toBeVisible();
-  await page.getByRole('link', { name: 'Approval desk' }).click();
+  await page.getByRole('link', { name: 'Approval gates' }).click();
   await expect(page.getByRole('heading', { name: 'Existing gate stays safe' })).toBeVisible();
   await expect(page.getByText('Forged approval')).toHaveCount(0);
   await expect(page.locator('[data-email-draft]')).toHaveCount(0);
@@ -378,8 +395,9 @@ test('route changes move keyboard focus to the new h1 and announce the destinati
   await page.goto('/');
   await page.getByRole('link', { name: 'Settings' }).focus();
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { name: 'Your desk, your data.' })).toBeFocused();
-  await expect(page.locator('#route-announcer')).toHaveText('Now viewing Your desk, your data.');
+  await expect(page).toHaveTitle('Settings — Send Gate');
+  await expect(page.getByRole('heading', { name: 'Manage local data and Pro.' })).toBeFocused();
+  await expect(page.locator('#route-announcer')).toHaveText('Now viewing Manage local data and Pro.');
   await page.goBack();
   await expect(page.getByRole('heading', { name: 'Approve quotes and invoices before they go out.' })).toBeFocused();
   await expect(page.locator('#route-announcer')).toHaveText('Now viewing Approve quotes and invoices before they go out.');
@@ -390,7 +408,7 @@ test('route metadata, build identity, and onboarding labels are complete without
   await expect(page).toHaveTitle('Send Gate — Approve quotes before sending');
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://invoice-approval-gate.sociobot.in/');
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /send-gate-social-1200x630\.jpg$/);
-  await expect(page.getByText('Built by Param Factory · v1.0.3 · build repair-6')).toBeVisible();
+  await expect(page.getByText('Built by Param Factory · v1.0.4 · build repair-7')).toBeVisible();
   const labelsFit = await page.locator('.how-strip small').evaluateAll((labels) => labels.every((label) => label.scrollWidth <= label.clientWidth));
   expect(labelsFit).toBe(true);
   if (testInfo.project.name === 'mobile') {
@@ -400,4 +418,10 @@ test('route metadata, build identity, and onboarding labels are complete without
   await page.goto('/privacy/');
   await expect(page).toHaveTitle('Privacy — Send Gate');
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://invoice-approval-gate.sociobot.in/privacy');
+  await expect(page.getByRole('heading', { name: 'How Send Gate handles your data.' })).toBeVisible();
+
+  await page.goto('/?new=1');
+  await expect(page).toHaveTitle('New approval gate — Send Gate');
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://invoice-approval-gate.sociobot.in/?new=1');
+  await expect(page.getByRole('heading', { name: 'Create an approval gate.' })).toBeVisible();
 });

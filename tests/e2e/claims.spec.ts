@@ -79,10 +79,10 @@ test('@claim:checkout-fail-soft handles the documented checkout 404 and a 500 wi
     });
   });
   await page.goto('/demo?view=settings');
-  const buy = page.getByRole('button', { name: /Buy Pro securely/ });
+  const buy = page.getByRole('button', { name: /Buy Send Gate Pro/ });
   await buy.click();
   await expect(page).toHaveURL(/\/demo\?view=settings/);
-  await expect(page.locator('#checkout-error')).toHaveText('Checkout is temporarily unavailable. Your free desk is unchanged. Please try again later or restore a purchase.');
+  await expect(page.locator('#checkout-error')).toHaveText('Checkout is temporarily unavailable. Your approval gates are unchanged. Please try again later or restore a purchase.');
   await buy.click();
   await expect(page).toHaveURL(/\/demo\?view=settings/);
   expect(attempt).toBe(2);
@@ -242,7 +242,7 @@ test('@claim:portable-import restores a valid portable JSON backup in the isolat
     name: 'demo-backup.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)),
   });
   await expect(page.getByText('1 gate restored and documents re-encrypted on this device.')).toBeVisible();
-  await page.getByRole('link', { name: 'Approval desk' }).click();
+  await page.getByRole('link', { name: 'Approval gates' }).click();
   await expect(page.getByRole('heading', { name: 'Imported demo quote' })).toBeVisible();
 });
 
@@ -271,10 +271,10 @@ test('@claim:free-active-limit allows five active gates before offering Pro', as
     await page.getByRole('button', { name: /Create draft gate/ }).click();
   }
   await page.getByRole('button', { name: /New approval gate/ }).click();
-  await expect(page.getByRole('heading', { name: 'All five active slots are in use.' })).toBeVisible();
-  await page.getByRole('button', { name: 'See the one-time unlock' }).click();
+  await expect(page.getByRole('heading', { name: 'All five active gates are in use.' })).toBeVisible();
+  await page.getByRole('button', { name: 'See the one-time purchase' }).click();
   await expect(page.getByText('$29 once')).toBeVisible();
-  await expect(page.getByText('Unlock unlimited active gates for growing teams.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Get unlimited active gates once.' })).toBeVisible();
 });
 
 test('@claim:license-restore unlocks Pro after a valid deterministic verification response', async ({ page }) => {
@@ -284,7 +284,7 @@ test('@claim:license-restore unlocks Pro after a valid deterministic verificatio
   await page.goto('/demo?view=settings');
   await page.getByText('Have a license? Restore purchase').click();
   await page.getByLabel('License token').fill('recorded-demo-license');
-  await page.getByRole('button', { name: 'Verify and unlock' }).click();
+  await page.getByRole('button', { name: 'Verify license' }).click();
   await expect(page.getByText('Pro is active on this device.')).toBeVisible();
 });
 
@@ -295,8 +295,8 @@ test('@claim:license-revocation keeps the free desk available when a license is 
   await page.goto('/demo?view=settings&license=recorded-revoked-license');
   await expect(page).not.toHaveURL(/license=/);
   await expect(page.getByText('That license is not active for Send Gate. Free features and purchase options remain available.')).toBeVisible();
-  await expect(page.getByRole('button', { name: /Buy Pro securely/ })).toBeVisible();
-  await page.getByRole('link', { name: 'Approval desk' }).click();
+  await expect(page.getByRole('button', { name: /Buy Send Gate Pro/ })).toBeVisible();
+  await page.getByRole('link', { name: 'Approval gates' }).click();
   await expect(page.getByRole('heading', { name: 'Harbour House — kitchen quote' })).toBeVisible();
 });
 

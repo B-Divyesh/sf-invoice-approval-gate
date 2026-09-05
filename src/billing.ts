@@ -37,7 +37,7 @@ export function checkoutUrl(email = ''): string {
 /**
  * Check that the hosted checkout is reachable before leaving the local app.
  * The redirect itself is deliberately still handled by the billing host; a
- * 404, 500, offline connection, or CORS failure leaves the free desk intact.
+ * 404, 500, offline connection, or CORS failure leaves the free workflow intact.
  */
 export async function beginCheckout(): Promise<'redirecting' | 'offline' | 'unavailable'> {
   if (!navigator.onLine) return 'offline';

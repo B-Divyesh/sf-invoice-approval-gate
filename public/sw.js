@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'send-gate-v6';
+const CACHE_VERSION = 'send-gate-v7';
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const CORE = [
@@ -9,6 +9,7 @@ const CORE = [
   '/404.html',
   '/404.css',
   '/offline.html',
+  '/offline.css',
   '/manifest.webmanifest',
   '/icon.svg',
   '/icons/icon-192.png',

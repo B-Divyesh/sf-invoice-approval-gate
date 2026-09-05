@@ -1,7 +1,7 @@
 [
   {
     "id": "checkout-fail-soft",
-    "claim": "If hosted checkout is unavailable, Send Gate keeps the free desk usable and explains the next step.",
+    "claim": "If hosted checkout is unavailable, Send Gate keeps the free workflow usable and explains the next step.",
     "where": "Settings Pro purchase control",
     "test": "npm run test:claims -- --grep @claim:checkout-fail-soft",
     "sandbox": "fresh /demo browser context; deterministic intercepted 404 then 500 checkout responses; assert no navigation and the recovery notice"
@@ -71,14 +71,14 @@
   },
   {
     "id": "deletion",
-    "claim": "Deleting a named gate removes it from this browser’s approval desk.",
-    "where": "Settings deletion note, approval desk",
+    "claim": "Deleting a named gate removes it from this browser’s approval records.",
+    "where": "Settings deletion note, approval gates",
     "test": "npm run test:claims -- --grep @claim:deletion",
     "sandbox": "fresh /demo browser context; confirm deletion of a named sample gate and assert it is absent from the demo IndexedDB record and rail"
   },
   {
     "id": "free-active-limit",
-    "claim": "The free desk allows five active gates, and Pro displays a $29 one-time offer for unlimited active gates.",
+    "claim": "The free plan allows five active gates, and Pro displays a $29 one-time offer for unlimited active gates.",
     "where": "Settings Pro offer, README",
     "test": "npm run test:claims -- --grep @claim:free-active-limit",
     "sandbox": "fresh /demo browser context; add two link gates to the three samples, assert the sixth active-gate form shows the limit, then assert the Pro price and unlimited-gates copy"
@@ -92,10 +92,10 @@
   },
   {
     "id": "license-revocation",
-    "claim": "An inactive license leaves the free desk available.",
+    "claim": "An inactive license leaves the free five-gate workflow available.",
     "where": "Settings inactive-license notice, Terms",
     "test": "npm run test:claims -- --grep @claim:license-revocation",
-    "sandbox": "fresh /demo browser context; deterministic recorded invalid verify response for a returned token; assert recovery notice, purchase control, and usable approval desk"
+    "sandbox": "fresh /demo browser context; deterministic recorded invalid verify response for a returned token; assert recovery notice, purchase control, and usable approval gates"
   },
   {
     "id": "pwa-shell",

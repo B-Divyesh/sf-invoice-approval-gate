@@ -65,13 +65,13 @@ class SendGateApp {
     } catch (error) {
       this.storageError = error instanceof Error ? error.message : 'Private local storage could not be opened.';
     }
-    if (returned) this.notice = 'License received. Checking your unlock…';
+    if (returned) this.notice = 'License received. Checking it now…';
     this.render();
     if (hasLicense()) {
       const result = await verifyLicense(returned);
       const wasPro = this.pro;
       this.pro = result.valid;
-      if (returned && result.valid) this.notice = 'Pro unlocked on this device.';
+      if (returned && result.valid) this.notice = 'License verified.';
       if (returned && !result.valid) {
         this.notice = result.offline
           ? 'License saved, but it could not be checked offline. Connect and restore it from Settings.'
@@ -147,13 +147,22 @@ class SendGateApp {
       return;
     }
     if (path !== '/' && path !== '/demo') {
-      this.setPageMetadata('Page not found — Send Gate', 'This Send Gate page does not exist. Return to the approval desk.', path);
+      this.setPageMetadata('Page not found — Send Gate', 'This Send Gate page does not exist. Return to your approval gates.', path);
       this.root.innerHTML = this.notFoundPage();
       return;
     }
-    this.setPageMetadata(this.demo ? 'Demo — Send Gate' : 'Send Gate — Approve quotes before sending', this.demo
-      ? 'Try Send Gate with isolated sample quotes and invoices.'
-      : 'A local approval checkpoint for small agencies and trade teams before a quote or invoice reaches a client.', this.demo ? '/demo' : '/');
+    const routeBase = this.demo ? '/demo' : '/';
+    if (this.view === 'settings') {
+      this.setPageMetadata('Settings — Send Gate', 'Export local approval records, manage deletion, or restore Send Gate Pro.', `${routeBase}?view=settings`);
+    } else if (this.view === 'new') {
+      this.setPageMetadata(this.editing ? 'Edit approval gate — Send Gate' : 'New approval gate — Send Gate', this.editing
+        ? 'Edit a quote or invoice approval gate before its next review.'
+        : 'Create a local approval gate for a quote or invoice.', `${routeBase}?new=1`);
+    } else {
+      this.setPageMetadata(this.demo ? 'Demo — Send Gate' : 'Send Gate — Approve quotes before sending', this.demo
+        ? 'Try Send Gate with isolated sample quotes and invoices.'
+        : 'A local approval checkpoint for small agencies and trade teams before a quote or invoice reaches a client.', routeBase);
+    }
     const offline = !navigator.onLine;
     this.root.innerHTML = `
       <header class="site-header">
@@ -162,7 +171,7 @@ class SendGateApp {
           <span>Send Gate</span>
         </a>
         <nav aria-label="Primary navigation">
-          <a href="/" data-route="/" ${this.view === 'desk' || this.view === 'new' ? 'aria-current="page"' : ''}>Approval desk</a>
+          <a href="/" data-route="/" ${this.view === 'desk' || this.view === 'new' ? 'aria-current="page"' : ''}>Approval gates</a>
           <a href="/demo" data-route="/demo" ${this.demo ? 'aria-current="page"' : ''}>Try sample</a>
           <a href="/?view=settings" data-route="/?view=settings" ${this.view === 'settings' ? 'aria-current="page"' : ''}>Settings</a>
         </nav>
@@ -208,14 +217,14 @@ class SendGateApp {
       <p><span class="mini-mark" aria-hidden="true">▰</span> Local approval records stay in this browser.</p>
       <nav aria-label="Legal"><a href="/privacy" data-route="/privacy">Privacy</a><a href="/terms" data-route="/terms">Terms</a></nav>
       <p class="art-note">Original AI-assisted paper artwork, made for Send Gate.</p>
-      <p class="build-note">Built by Param Factory · v1.0.3 · build repair-6</p>
+      <p class="build-note">Built by Param Factory · v1.0.4 · build repair-7</p>
     </footer>`;
   }
 
   private storageFailure(): string {
     return `<main id="main" class="error-page" tabindex="-1">
       <p class="eyebrow">Local storage unavailable</p>
-      <h1>The approval desk could not open.</h1>
+      <h1>Your local approval data could not open.</h1>
       <p>${e(this.storageError)}</p>
       <p>Use a current browser outside private-browsing restrictions, or check that storage is allowed for this site.</p>
       <button class="primary" data-action="retry-storage">Try again</button>
@@ -228,7 +237,7 @@ class SendGateApp {
     if (!this.selectedId) this.selectedId = selected.id;
     return `<main id="main" class="desk-main" tabindex="-1">
       <div class="page-heading">
-        <div><p class="eyebrow">Approval desk · ${this.gates.length} ${this.gates.length === 1 ? 'gate' : 'gates'}</p><h1>What is waiting at the gate?</h1></div>
+        <div><p class="eyebrow">Approval gates · ${this.gates.length} ${this.gates.length === 1 ? 'gate' : 'gates'}</p><h1>Review quotes and invoices before sending.</h1></div>
         <button class="primary paper-button" data-action="new-gate"><span aria-hidden="true">＋</span> New approval gate</button>
       </div>
       <div class="desk-layout">
@@ -249,11 +258,11 @@ class SendGateApp {
           <span>Loads three sample gates. Nothing is saved.</span>
           <button class="secondary" data-action="new-gate">Create an approval gate</button>
         </div>
-        <ul class="plain-facts" aria-label="Send Gate facts"><li>Works offline after the first visit.</li><li>PDFs encrypt before local storage.</li><li>$29 once unlocks unlimited active gates.</li></ul>
+        <ul class="plain-facts" aria-label="Send Gate facts"><li>Works offline after the first visit.</li><li>PDFs encrypt before local storage.</li><li>$29 once adds unlimited active gates.</li></ul>
         <ol class="how-strip" aria-label="How Send Gate works" tabindex="0">
-          <li><span>1</span><strong>Place</strong><small>Add a PDF or link</small></li>
-          <li><span>2</span><strong>Check</strong><small>Approve or return</small></li>
-          <li><span>3</span><strong>Release</strong><small>Open the email draft</small></li>
+          <li><span>1</span><strong>Add</strong><small>Add a PDF or link</small></li>
+          <li><span>2</span><strong>Review</strong><small>Approve or return</small></li>
+          <li><span>3</span><strong>Send</strong><small>Open the email draft</small></li>
         </ol>
       </section>
       <figure class="hero-art">
@@ -376,12 +385,12 @@ class SendGateApp {
     const activeLimitReached = !this.pro && !gate && this.activeCount() >= FREE_ACTIVE_LIMIT;
     return `<main id="main" class="form-main" tabindex="-1">
       <div class="form-intro">
-        <button class="back-button" data-action="back-desk"><span aria-hidden="true">←</span> Approval desk</button>
-        <p class="eyebrow">${gate ? 'Edit the checkpoint' : 'New approval gate'}</p>
-        <h1>${gate ? 'Adjust the sheet before review.' : 'Place a document at the gate.'}</h1>
+        <button class="back-button" data-action="back-desk"><span aria-hidden="true">←</span> Approval gates</button>
+        <p class="eyebrow">${gate ? 'Edit approval gate' : 'New approval gate'}</p>
+        <h1>${gate ? 'Edit this approval gate.' : 'Create an approval gate.'}</h1>
         <p>${gate ? 'Edits are added to the local approval record.' : 'Add the final draft, who it is for, and the person who must check it.'}</p>
       </div>
-      ${activeLimitReached ? `<section class="limit-sheet" aria-labelledby="limit-heading"><p class="eyebrow">Free desk full</p><h2 id="limit-heading">All five active slots are in use.</h2><p>Finish or delete a gate to keep using the free desk, or unlock unlimited active gates for ${PRICE_LABEL}.</p><button class="primary" data-action="open-settings">See the one-time unlock</button></section>` : this.gateFormFields(gate)}
+      ${activeLimitReached ? `<section class="limit-sheet" aria-labelledby="limit-heading"><p class="eyebrow">Free plan full</p><h2 id="limit-heading">All five active gates are in use.</h2><p>Finish or delete a gate to keep using the free plan, or get unlimited active gates for ${PRICE_LABEL}.</p><button class="primary" data-action="open-settings">See the one-time purchase</button></section>` : this.gateFormFields(gate)}
     </main>`;
   }
 
@@ -424,7 +433,7 @@ class SendGateApp {
       <div class="form-section">
         <div class="section-number" aria-hidden="true">03</div>
         <div class="section-fields">
-          <h2>The second pair of eyes</h2>
+          <h2>Reviewer</h2>
           <label>Reviewer name<input name="approver" required data-trim-required maxlength="100" autocomplete="name" value="${e(gate?.approver ?? '')}" aria-describedby="approver-help" /></label>
           <p id="approver-help" class="field-help">Send Gate records the name you enter; it does not verify identity or provide legal approval.</p>
         </div>
@@ -437,24 +446,24 @@ class SendGateApp {
   private settingsPage(): string {
     const licensePresent = hasLicense();
     return `<main id="main" class="settings-main" tabindex="-1">
-      <div class="settings-heading"><p class="eyebrow">Local controls</p><h1>Your desk, your data.</h1><p>Everything below is explicit. Send Gate does not sync in the background or upload your documents.</p></div>
+      <div class="settings-heading"><p class="eyebrow">Local controls</p><h1>Manage local data and Pro.</h1><p>Export records, manage your license, or review deletion controls. Send Gate does not upload your documents.</p></div>
       <div class="settings-grid">
         <section class="settings-section" aria-labelledby="data-heading">
-          <div class="settings-icon" aria-hidden="true">⇩</div><div><h2 id="data-heading">Take your data with you</h2><p>Export gates and documents as a readable JSON backup. Because it is portable, the backup itself is not encrypted—store it privately.</p>
+          <div class="settings-icon" aria-hidden="true">⇩</div><div><h2 id="data-heading">Export or import your data</h2><p>Export gates and documents as a readable JSON backup. Because it is portable, the backup itself is not encrypted—store it privately.</p>
           <div class="button-row"><button class="secondary" data-action="export-data" ${this.gates.length ? '' : 'disabled'}>Export ${this.gates.length || ''} ${this.gates.length === 1 ? 'gate' : 'gates'}</button><label class="file-button">Import backup<input id="import-file" type="file" accept="application/json,.json" /></label></div></div>
         </section>
         <section class="settings-section pro-sheet" aria-labelledby="pro-heading">
-          <div class="pro-ribbon">One-time</div><div class="settings-icon" aria-hidden="true">∞</div><div><p class="eyebrow">Send Gate Pro</p><h2 id="pro-heading">A bigger desk, not a subscription.</h2><p>Unlock unlimited active gates for growing teams. The five-gate desk stays available without Pro.</p>
+          <div class="pro-ribbon">One-time</div><div class="settings-icon" aria-hidden="true">∞</div><div><p class="eyebrow">Send Gate Pro</p><h2 id="pro-heading">Get unlimited active gates once.</h2><p>Use more than five active gates. The five-gate free plan stays available.</p>
           <p class="price">${PRICE_LABEL}<small>One-time purchase · for this product</small></p>
           ${this.pro ? `<div class="license-good" role="status">✓ Pro is active on this device.</div><button class="text-button" data-action="remove-license">Remove license from this device</button>` : `
             ${licensePresent ? `<p class="license-quiet">License no longer active or could not be verified. Free features are unchanged.</p>` : ''}
-            <button class="primary" data-action="buy-pro" data-checkout-url="${e(checkoutUrl())}">Buy Pro securely <span aria-hidden="true">↗</span></button>
+            <button class="primary" data-action="buy-pro" data-checkout-url="${e(checkoutUrl())}">Buy Send Gate Pro <span aria-hidden="true">↗</span></button>
             <p id="checkout-error" class="field-error" role="alert"></p>
-            <details class="restore"><summary>Have a license? Restore purchase</summary><form id="license-form"><label for="license-token">License token<input id="license-token" name="license" required autocomplete="off" spellcheck="false" /></label><button class="secondary" type="submit">Verify and unlock</button><p id="license-error" class="field-error" role="alert"></p></form></details>`}
+            <details class="restore"><summary>Have a license? Restore purchase</summary><form id="license-form"><label for="license-token">License token<input id="license-token" name="license" required autocomplete="off" spellcheck="false" /></label><button class="secondary" type="submit">Verify license</button><p id="license-error" class="field-error" role="alert"></p></form></details>`}
           <p class="merchant-note">Checkout and refunds are handled by Sociobot/Dodo, the merchant of record. A refunded license is automatically revoked. <a href="/terms" data-route="/terms">Purchase terms</a></p></div>
         </section>
         <section class="settings-section danger-zone" aria-labelledby="privacy-heading">
-          <div class="settings-icon" aria-hidden="true">×</div><div><h2 id="privacy-heading">Delete deliberately</h2><p>Delete individual gates from the approval desk. Each confirmation names the record; deletion removes its encrypted PDF and approval history from this browser.</p><p><a href="/privacy" data-route="/privacy">Read the plain-language privacy note</a></p></div>
+          <div class="settings-icon" aria-hidden="true">×</div><div><h2 id="privacy-heading">Delete a gate</h2><p>Delete individual gates from this browser. Each confirmation names the record and removes its encrypted PDF and approval history.</p><p><a href="/privacy" data-route="/privacy">Read the privacy note</a></p></div>
         </section>
       </div>
     </main>`;
@@ -462,21 +471,21 @@ class SendGateApp {
 
   private legalPage(page: 'privacy' | 'terms'): string {
     const privacy = page === 'privacy';
-    return `<header class="site-header legal-header"><a class="brand" href="/" data-route="/"><span class="brand-mark" aria-hidden="true"><span></span></span><span>Send Gate</span></a><nav aria-label="Primary navigation"><a href="/" data-route="/">Approval desk</a><a href="/demo" data-route="/demo">Try sample</a></nav><a href="/" data-route="/">Return to approval desk</a></header>
+    return `<header class="site-header legal-header"><a class="brand" href="/" data-route="/"><span class="brand-mark" aria-hidden="true"><span></span></span><span>Send Gate</span></a><nav aria-label="Primary navigation"><a href="/" data-route="/">Approval gates</a><a href="/demo" data-route="/demo">Try sample</a></nav><a href="/" data-route="/">Return to approval gates</a></header>
       <p id="route-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></p>
       <main id="main" class="legal-main" tabindex="-1">
         <p class="eyebrow">Last updated 28 August 2026</p>
-        <h1>${privacy ? 'Privacy, without fine print.' : 'Terms of use.'}</h1>
+        <h1>${privacy ? 'How Send Gate handles your data.' : 'Terms for Send Gate.'}</h1>
         ${privacy ? `
           <p class="lede">Your approval gates belong to you. Send Gate is designed so the product operator does not receive them.</p>
           <h2>What stays on your device</h2><p>Gate details, recipients, amounts, comments, history, and PDFs are stored in your browser’s IndexedDB. PDFs are encrypted with AES-GCM before storage when the browser supports Web Crypto. The encryption key stays in this site’s browser storage on the same device.</p>
-          <h2>What leaves your device</h2><p>Nothing during normal free use. Opening a source link or email draft contacts the service you choose. If you buy or verify Pro, your license token is sent to Sociobot’s billing API; documents and gate details are not sent with it. We do not include analytics, advertising trackers, remote fonts, or third-party scripts.</p>
+          <h2>What leaves your device</h2><p>Nothing during normal free use. Opening a source link or email draft contacts the service you choose. Buying or verifying Pro sends your license token to Sociobot’s billing API. Documents and gate details are not sent with it. We do not include analytics, advertising trackers, remote fonts, or third-party scripts.</p>
           <h2>Backups and deletion</h2><p>Portable JSON exports contain readable document data so they can move between devices; protect those files yourself. Deleting a gate removes its record and encrypted PDF from this browser. Clearing site data removes all gates and the local encryption key and cannot be undone without a backup.</p>
           <h2>Questions</h2><p>For privacy questions about the hosted product, contact <a href="mailto:privacy@sociobot.in">privacy@sociobot.in</a>.</p>` : `
           <p class="lede">Send Gate is a practical handoff record, not an accounting, legal, or identity-verification service.</p>
-          <h2>Using the product</h2><p>You are responsible for checking document accuracy, choosing the real reviewer, attaching the intended file, sending the final message, and complying with rules that apply to your business. An “approved” state records the decision entered on this device; it is not a legal signature or a compliance certification.</p>
+          <h2>Using the product</h2><p>You must check document accuracy, choose the real reviewer, attach the intended file, and send the final message. You must also follow the rules that apply to your business. An “approved” state records the decision entered on this device. It is not a legal signature or compliance certification.</p>
           <h2>Local storage and availability</h2><p>The product is provided “as is.” Browser storage can be cleared or become unavailable. Keep your own business records and make exports when appropriate. We do not promise uninterrupted access, recovery, or suitability for regulated records.</p>
-          <h2>Pro purchase</h2><p>Send Gate Pro is ${PRICE_LABEL} and unlocks unlimited active gates. It is not a subscription. Sociobot/Dodo is the merchant of record and handles checkout and refunds. A refund revokes the related license. Core export, deletion, safety, and accessibility features are not paid features.</p>
+          <h2>Pro purchase</h2><p>Send Gate Pro is ${PRICE_LABEL} and adds unlimited active gates. It is not a subscription. Sociobot/Dodo is the merchant of record and handles checkout and refunds. A refund revokes the related license. Core export, deletion, safety, and accessibility features are not paid features.</p>
           <h2>Acceptable use</h2><p>Do not use Send Gate to distribute unlawful, deceptive, infringing, or malicious material. You retain responsibility for your documents and communications.</p>
           <h2>Warranty and liability</h2><p>To the maximum extent allowed by law, the software is provided without warranties. The operator is not liable for lost browser data, missed approvals, incorrect documents, or messages sent through external email or link services.</p>`}
       </main>
@@ -486,7 +495,7 @@ class SendGateApp {
   private notFoundPage(): string {
     return `<header class="site-header"><a class="brand" href="/" data-route="/" aria-label="Send Gate home"><span class="brand-mark" aria-hidden="true"><span></span></span><span>Send Gate</span></a></header>
       <p id="route-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></p>
-      <main id="main" class="error-page" tabindex="-1"><p class="eyebrow">404</p><h1>This page is not on the approval desk.</h1><p>Check the address, or return to your quotes and invoices.</p><a class="primary link-button" href="/" data-route="/">Return to approval desk</a></main>
+      <main id="main" class="error-page" tabindex="-1"><p class="eyebrow">404</p><h1>This page does not exist.</h1><p>Check the address, or return to your quotes and invoices.</p><a class="primary link-button" href="/" data-route="/">Return to approval gates</a></main>
       ${this.footer()}`;
   }
 
@@ -584,10 +593,10 @@ class SendGateApp {
       saveLicense(token);
       const result = await verifyLicense(true);
       this.pro = result.valid;
-      if (result.valid) { this.notice = 'Pro unlocked on this device.'; this.render(); }
+      if (result.valid) { this.notice = 'License verified.'; this.render(); }
       else if (error) {
         error.textContent = result.offline ? 'You are offline. Connect and try verification again.' : 'That license is not active for Send Gate. Check the token and try again.';
-        if (button) { button.disabled = false; button.textContent = 'Verify and unlock'; }
+        if (button) { button.disabled = false; button.textContent = 'Verify license'; }
       }
     }
   }
@@ -755,8 +764,8 @@ class SendGateApp {
     const result = await beginCheckout();
     if (result === 'redirecting') return;
     this.notice = result === 'offline'
-      ? 'Checkout needs a connection. Your free desk is still available.'
-      : 'Checkout is temporarily unavailable. Your free desk is unchanged. Please try again later or restore a purchase.';
+      ? 'Checkout needs a connection. The free five-gate plan is still available.'
+      : 'Checkout is temporarily unavailable. Your approval gates are unchanged. Please try again later or restore a purchase.';
     this.render();
     document.querySelector<HTMLElement>('#checkout-error')?.replaceChildren(this.notice);
   }

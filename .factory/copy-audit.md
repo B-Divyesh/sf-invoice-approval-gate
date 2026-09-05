@@ -1,6 +1,6 @@
 # Send Gate landing copy audit
 
-Audited 2026-08-30 after the repair. Counts include ordinary words only; labels
+Audited 2026-09-05 after repair 7. Counts include ordinary words only; labels
 and proper product names are counted as words. No landing sentence exceeds 22
 words or uses a banned plain-words term.
 
@@ -15,14 +15,17 @@ words or uses a banned plain-words term.
 | Real action | Create an approval gate | 4 | pass |
 | Fact | Works offline after the first visit. | 6 | pass |
 | Fact | PDFs encrypt before local storage. | 5 | pass |
-| Fact | $29 once unlocks unlimited active gates. | 6 | pass |
+| Fact | $29 once adds unlimited active gates. | 6 | pass |
+| Step one label | Add | 1 | pass |
 | Step one | Add a PDF or link | 5 | pass |
+| Step two label | Review | 1 | pass |
 | Step two | Approve or return | 3 | pass |
+| Step three label | Send | 1 | pass |
 | Step three | Open the email draft | 5 | pass |
 | Artwork caption | A document waits for a recorded approval before you send it. | 11 | pass |
 | Footer | Local approval records stay in this browser. | 7 | pass |
 | Footer | Original AI-assisted paper artwork, made for Send Gate. | 8 | pass |
-| Footer | Built by Param Factory · v1.0.2 · build repair-5 | 8 | pass |
+| Footer | Built by Param Factory · v1.0.4 · build repair-7 | 8 | pass |
 
 ## Terminology
 

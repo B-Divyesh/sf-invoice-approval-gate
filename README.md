@@ -2,9 +2,9 @@
 
 Approve quotes and invoices before they go out. Send Gate is for small agencies
 and trade teams that need a recorded second review before a client handoff.
-Try it in one click at [`/demo`](https://invoice-approval-gate.sociobot.in/demo):
-three sample gates load in an isolated browser namespace, and nothing is saved
-to a real desk.
+Try it in one click at [`/demo`](https://invoice-approval-gate.sociobot.in/demo).
+Three sample gates load in isolated browser storage. They never change your
+real data.
 
 Live product: <https://invoice-approval-gate.sociobot.in>
 
@@ -14,7 +14,7 @@ Live product: <https://invoice-approval-gate.sociobot.in>
 - A sent handoff cannot be sent again from the same gate.
 - PDFs use browser AES-GCM encryption before local IndexedDB storage.
 - Free workflow data stays in the browser and makes same-origin requests only.
-- The free desk has five active gates. Pro is $29 once for unlimited active
+- The free plan has five active gates. Pro is $29 once for unlimited active
   gates.
 - Export creates a portable JSON backup. It can contain readable PDF data, so
   keep the downloaded file private.
@@ -65,9 +65,9 @@ VITE_BILLING_API_BASE=https://pilot-api.sociobot.in/api/v1 npm run build
 
 No product ID or secret is stored in the repository; billing uses the public
 `invoice-approval-gate` slug. Deploy only the contents of `dist/`. The included
-`staticwebapp.config.json` applies the product's CSP, anti-framing, permissions,
-manifest MIME, update, and immutable-asset cache policy on Azure Static Web
-Apps. The host must serve HTTPS so Web Crypto and service workers are available.
+`staticwebapp.config.json` applies the product's browser security and cache
+policy. The host must serve HTTPS so Web Crypto and service workers are
+available.
 
 ## Privacy and limitations
 
